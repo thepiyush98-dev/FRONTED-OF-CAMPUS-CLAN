@@ -555,63 +555,94 @@ function PublicEvents({ onLogin }: { onLogin: () => void }) {
             This month
           </button>
         </div>
-        <div className="event-grid">
-          {visibleEvents.map((event, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleEvents.map((event) => (
             <article
-              className={`public-event-card ${index === 0 ? "featured" : ""} cursor-pointer`}
               key={event.id}
+              className="group bg-white rounded-2xl overflow-hidden border border-slate-200/80 hover:border-amber-400 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer"
               onClick={() => setSelectedPublicEvent(event)}
             >
-              <div
-                className={`event-art ${event.accent}`}
-                style={
-                  index === 0
-                    ? {
-                        backgroundImage: `linear-gradient(110deg, rgba(12,18,27,.88), rgba(12,18,27,.16)), url("${workshopPhoto}")`,
-                      }
-                    : undefined
-                }
-              >
-                <span className="event-type">{event.type}</span>
-                <div className="event-date">
-                  <small>{event.month}</small>
-                  <strong>{event.day}</strong>
-                </div>
-                {index !== 0 && (
-                  <div className="art-symbol">
-                    {["<>", "Aa", "↗", "AI", "◎", "RX"][index]}
+              <div>
+                {/* 16:9 YouTube Thumbnail Artwork Container */}
+                <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
+                  <img
+                    src={event.thumbnail || workshopPhoto}
+                    alt={event.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30 pointer-events-none" />
+
+                  {/* Top-Left Category Pill */}
+                  <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-white/20 text-white font-extrabold text-[10px] uppercase tracking-wider shadow">
+                    {event.type}
+                  </span>
+
+                  {/* Top-Right Date Badge */}
+                  <div className="absolute top-3 right-3 z-10 w-11 h-12 rounded-xl bg-white/95 backdrop-blur-md flex flex-col items-center justify-center shadow-lg border border-white/40">
+                    <span className="text-[9px] font-black text-amber-600 uppercase leading-none">
+                      {event.month}
+                    </span>
+                    <strong className="text-base font-black text-slate-900 leading-tight">
+                      {event.day}
+                    </strong>
                   </div>
-                )}
+
+                  {/* Bottom attendees indicator */}
+                  <div className="absolute bottom-2.5 left-3 z-10 flex items-center gap-1.5 text-white text-[11px] font-bold drop-shadow">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{event.people} attending</span>
+                  </div>
+                </div>
+
+                {/* Body Content */}
+                <div className="p-5 space-y-2.5">
+                  <h3 className="text-lg md:text-xl font-black text-slate-900 tracking-tight group-hover:text-amber-600 transition-colors">
+                    {event.title}
+                  </h3>
+                  <p className="text-xs text-slate-600 font-medium line-clamp-2 leading-relaxed">
+                    {event.tagline || "Join fellow students for an immersive campus learning and networking experience."}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-semibold text-slate-500 border-t border-slate-100">
+                    <span className="flex items-center gap-1">
+                      <Icon name="pin" size={13} />
+                      {event.location}
+                    </span>
+                    <span>·</span>
+                    <span className="flex items-center gap-1">
+                      <Icon name="clock" size={13} />
+                      {event.time}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="event-card-body">
-                <span className="hosted">CAMPUS CLANS</span>
-                <h3>{event.title}</h3>
-                <div className="event-meta">
-                  <span>
-                    <Icon name="clock" size={15} />
-                    {event.time}
-                  </span>
-                  <span>
-                    <Icon name="pin" size={15} />
-                    {event.location}
-                  </span>
-                </div>
-                <div className="event-card-footer">
-                  <div className="attendees">
-                    <span>AK</span>
-                    <span>RM</span>
-                    <span>+{event.people}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedPublicEvent(event)
-                    }}
-                  >
-                    View details <Icon name="arrow" size={15} />
-                  </button>
-                </div>
+
+              {/* Action Buttons: Details Modal & RSVP / Interested */}
+              <div className="p-5 pt-0 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedPublicEvent(event)
+                  }}
+                  className="py-2.5 px-3 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                  title="View Venue, Schedule & Registration"
+                >
+                  <span>Details</span>
+                  <Icon name="arrowRight" size={13} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onLogin()
+                  }}
+                  className="flex-1 py-2.5 px-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer primary-button !w-full"
+                >
+                  <Icon name="calendar" size={14} />
+                  <span>{event.hasRegistration ? "Register" : "Interested"}</span>
+                </button>
               </div>
             </article>
           ))}
@@ -678,6 +709,7 @@ function LoginModal({
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("••••••••")
   const [loginError, setLoginError] = useState("")
+  const [loginLoading, setLoginLoading] = useState(false)
 
   // Register State
   const [regName, setRegName] = useState("")
@@ -694,58 +726,110 @@ function LoginModal({
   const [otpVerifying, setOtpVerifying] = useState(false)
   const [regStatusMsg, setRegStatusMsg] = useState("")
   const [regError, setRegError] = useState("")
+  const [regLoading, setRegLoading] = useState(false)
+
+  // Real-time Username Check State (/check-username/)
+  const [usernameCheck, setUsernameCheck] = useState<{
+    checking: boolean
+    available: boolean | null
+    message: string
+  }>({
+    checking: false,
+    available: null,
+    message: "",
+  })
+
+  // Debounced Live Username Validator
+  useEffect(() => {
+    const trimmed = regUsername.trim().toLowerCase()
+    if (!trimmed || trimmed.length < 3) {
+      setUsernameCheck({ checking: false, available: null, message: "" })
+      return
+    }
+
+    setUsernameCheck({ checking: true, available: null, message: "Checking username availability..." })
+    const timer = setTimeout(async () => {
+      try {
+        const res = await djangoApi.auth.checkUsername(trimmed)
+        if (res.available) {
+          setUsernameCheck({
+            checking: false,
+            available: true,
+            message: `✓ @${trimmed} is available!`,
+          })
+        } else {
+          setUsernameCheck({
+            checking: false,
+            available: false,
+            message: `✗ @${trimmed} is already taken. Try another username.`,
+          })
+        }
+      } catch {
+        setUsernameCheck({ checking: false, available: null, message: "" })
+      }
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [regUsername])
 
   // Forgot Password State
   const [forgotEmail, setForgotEmail] = useState("")
   const [forgotOtp, setForgotOtp] = useState("")
   const [forgotPassword, setForgotPassword] = useState("")
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState("")
   const [forgotOtpSent, setForgotOtpSent] = useState(false)
+  const [forgotOtpVerified, setForgotOtpVerified] = useState(false)
+  const [forgotSending, setForgotSending] = useState(false)
+  const [forgotVerifying, setForgotVerifying] = useState(false)
+  const [forgotResetting, setForgotResetting] = useState(false)
   const [forgotStatusMsg, setForgotStatusMsg] = useState("")
   const [forgotError, setForgotError] = useState("")
 
-  // Handle Login Submit
-  function submitLogin(event: FormEvent<HTMLFormElement>) {
+  // Handle Login Submit (/login/)
+  async function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setLoginError("")
     const targetEmail = loginEmail.trim() || (role === "admin" ? "admin@campus.edu" : "student@campus.edu")
     if (loginEmail.trim() && !loginEmail.includes("@") && loginEmail.length < 3) {
-      setLoginError("Please enter a valid campus username or email.")
+      setLoginError("Please enter a valid campus username or college email.")
       return
     }
-    onSubmit(role, targetEmail)
+    setLoginLoading(true)
+    try {
+      await onSubmit(role, targetEmail)
+    } finally {
+      setLoginLoading(false)
+    }
   }
 
-  // Handle Send Registration OTP
+  // Handle Send Registration OTP (/send-otp/)
   async function handleSendOtp() {
     if (!regEmail.trim() || !regEmail.includes("@")) {
-      setRegError("Please enter a valid email address first.")
+      setRegError("Please enter a valid college email address first.")
       return
     }
-    setRegSending(true)
+    setOtpSending(true)
     setRegError("")
+    setRegStatusMsg("")
     try {
       const res = await sendOtp(regEmail.trim())
       if (res.success) {
         setOtpSent(true)
         setRegStatusMsg(res.message || `OTP sent to ${regEmail}. (Demo OTP: 123456)`)
       } else {
-        setRegError(res.error || "Failed to send OTP.")
+        setRegError(res.error || "Failed to send OTP to college email.")
       }
     } catch (e: any) {
-      setRegError(e.message || "Could not connect to auth service.")
+      setRegError(e.message || "Could not connect to authentication service.")
     } finally {
-      setRegSending(false)
+      setOtpSending(false)
     }
   }
 
-  // Helper for loading state
-  function setRegSending(val: boolean) {
-    setOtpSending(val)
-  }
-
-  // Handle Verify Registration OTP
+  // Handle Verify Registration OTP (/verify-otp/)
   async function handleVerifyOtp() {
     if (!regOtp.trim() || regOtp.trim().length !== 6) {
-      setRegError("Please enter the 6-digit OTP sent to your email.")
+      setRegError("Please enter the 6-digit OTP received on your email.")
       return
     }
     setOtpVerifying(true)
@@ -754,9 +838,9 @@ function LoginModal({
       const res = await verifyOtp(regEmail.trim(), regOtp.trim())
       if (res.success) {
         setOtpVerified(true)
-        setRegStatusMsg("✓ Email verified successfully! Now complete your credentials.")
+        setRegStatusMsg("✓ College email verified successfully! Now complete your credentials.")
       } else {
-        setRegError(res.error || "Invalid or expired OTP.")
+        setRegError(res.error || "Invalid or expired OTP. Use demo OTP: 123456")
       }
     } catch (e: any) {
       setRegError(e.message || "Verification failed.")
@@ -765,15 +849,19 @@ function LoginModal({
     }
   }
 
-  // Handle Complete Registration
+  // Handle Complete Student Registration (/register-student/)
   async function submitRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!otpVerified) {
-      setRegError("Please verify your email address via OTP before registering.")
+      setRegError("Please verify your college email address with OTP first.")
       return
     }
     if (!regName.trim() || !regUsername.trim() || !regPassword) {
-      setRegError("Please fill in all required fields.")
+      setRegError("Please fill in all required registration fields.")
+      return
+    }
+    if (usernameCheck.available === false) {
+      setRegError("Desired username is taken. Please select an available username.")
       return
     }
     if (regPassword !== regConfirmPassword) {
@@ -785,51 +873,114 @@ function LoginModal({
       return
     }
 
+    setRegLoading(true)
     setRegError("")
-    const res = await registerStudent({
-      name: regName.trim(),
-      department: regDept.trim(),
-      branch: regBranch.trim(),
-      email: regEmail.trim(),
-      username: regUsername.trim(),
-      password: regPassword,
-      confirm_password: regConfirmPassword,
-    })
+    try {
+      const res = await registerStudent({
+        name: regName.trim(),
+        department: regDept.trim(),
+        branch: regBranch.trim(),
+        email: regEmail.trim(),
+        username: regUsername.trim(),
+        password: regPassword,
+        confirm_password: regConfirmPassword,
+      })
 
-    if (res.success) {
-      onSubmit("student", regEmail.trim())
-    } else {
-      setRegError(res.error || "Registration failed.")
+      if (res.success) {
+        onSubmit("student", regEmail.trim())
+      } else {
+        setRegError(res.error || "Student registration failed. Please try again.")
+      }
+    } catch (err: any) {
+      setRegError(err.message || "Registration connection failed.")
+    } finally {
+      setRegLoading(false)
     }
   }
 
-  // Handle Forgot Password OTP Send
+  // Handle Send Password Reset OTP (/send-password-reset-otp/)
   async function handleForgotSendOtp() {
     if (!forgotEmail.trim() || !forgotEmail.includes("@")) {
-      setForgotError("Please enter your registered campus email.")
+      setForgotError("Please enter your registered college email.")
       return
     }
+    setForgotSending(true)
     setForgotError("")
-    setForgotOtpSent(true)
-    setForgotStatusMsg(`Reset OTP sent to ${forgotEmail}. (Demo OTP: 123456)`)
+    setForgotStatusMsg("")
+    try {
+      const res = await djangoApi.auth.sendPasswordResetOtp(forgotEmail.trim())
+      if (res.success) {
+        setForgotOtpSent(true)
+        setForgotStatusMsg(`Password reset OTP sent to ${forgotEmail}. (Demo OTP: 123456)`)
+      } else {
+        setForgotError(res.error || "Could not send password reset OTP.")
+      }
+    } catch (e: any) {
+      setForgotError(e.message || "Failed to send reset OTP.")
+    } finally {
+      setForgotSending(false)
+    }
   }
 
-  // Handle Reset Password Submit
-  function submitForgot(event: FormEvent<HTMLFormElement>) {
+  // Handle Verify Password Reset OTP (/verify-password-reset-otp/)
+  async function handleForgotVerifyOtp() {
+    if (!forgotOtp.trim() || forgotOtp.trim().length !== 6) {
+      setForgotError("Please enter the 6-digit OTP.")
+      return
+    }
+    setForgotVerifying(true)
+    setForgotError("")
+    try {
+      const res = await djangoApi.auth.verifyPasswordResetOtp(forgotEmail.trim(), forgotOtp.trim())
+      if (res.success) {
+        setForgotOtpVerified(true)
+        setForgotStatusMsg("✓ Reset OTP verified! Please enter your new password below.")
+      } else {
+        setForgotError(res.error || "Invalid reset OTP. Use demo OTP: 123456")
+      }
+    } catch (e: any) {
+      setForgotError(e.message || "Verification failed.")
+    } finally {
+      setForgotVerifying(false)
+    }
+  }
+
+  // Handle Reset Password (/reset-password/)
+  async function submitForgot(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!forgotOtpSent || forgotOtp.trim().length !== 6) {
-      setForgotError("Please enter the 6-digit reset OTP.")
+    if (!forgotOtpVerified) {
+      setForgotError("Please verify your reset OTP first.")
       return
     }
     if (!forgotPassword || forgotPassword.length < 8) {
       setForgotError("New password must be at least 8 characters long.")
       return
     }
-    setForgotStatusMsg("✓ Password reset successfully! You can now sign in.")
-    setTimeout(() => {
-      setAuthMode("login")
-      setLoginEmail(forgotEmail)
-    }, 1200)
+    if (forgotPassword !== forgotConfirmPassword) {
+      setForgotError("Passwords do not match.")
+      return
+    }
+
+    setForgotResetting(true)
+    setForgotError("")
+    try {
+      const res = await djangoApi.auth.resetPassword(forgotPassword, forgotConfirmPassword)
+      if (res.success) {
+        setForgotStatusMsg("✓ Password reset successfully! Redirecting to sign in...")
+        setTimeout(() => {
+          setAuthMode("login")
+          setLoginEmail(forgotEmail)
+          setLoginPassword(forgotPassword)
+          setForgotStatusMsg("")
+        }, 1200)
+      } else {
+        setForgotError(res.error || "Failed to reset password.")
+      }
+    } catch (e: any) {
+      setForgotError(e.message || "Failed to reset password.")
+    } finally {
+      setForgotResetting(false)
+    }
   }
 
   return (
@@ -848,7 +999,88 @@ function LoginModal({
         </button>
         <Logo />
 
-        {/* 1. LOGIN MODE */}
+        {/* 1. TOP MODE SWITCHER TABS */}
+        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl my-4">
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode("login")
+              setLoginError("")
+            }}
+            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
+              authMode === "login"
+                ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            🔑 Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode("register")
+              setRegError("")
+            }}
+            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
+              authMode === "register"
+                ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            📝 Student Register (OTP)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode("forgot")
+              setForgotError("")
+            }}
+            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
+              authMode === "forgot"
+                ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            🔄 Reset Password
+          </button>
+        </div>
+
+        {/* 2. PROMINENT 1-CLICK QUICK DEMO SHORTCUT CARD (CHECK ADMIN & USER) */}
+        <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 space-y-2 mb-4 text-left">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black tracking-wider text-amber-950 uppercase flex items-center gap-1.5">
+              <span>⚡</span> Quick Demo Testing (1-Click)
+            </span>
+            <span className="text-[10px] text-amber-800 font-extrabold bg-amber-200/70 px-2 py-0.5 rounded-full">
+              Instant Access
+            </span>
+          </div>
+          <p className="text-[11px] text-amber-900/80 leading-snug">
+            Directly test both personas with real-time preloaded data:
+          </p>
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={() => onSubmit("student", "aarav.k@campus.edu")}
+              className="py-2.5 px-3 rounded-xl bg-white hover:bg-slate-900 hover:text-white border border-amber-300 font-bold text-xs text-slate-800 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
+              title="Test Student (User) Dashboard"
+            >
+              <Icon name="users" size={14} />
+              <span>Student (User)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onSubmit("admin", "admin@campus.edu")}
+              className="py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-500 border border-amber-500 font-black text-xs text-slate-950 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
+              title="Test Campus Admin Console"
+            >
+              <Icon name="grid" size={14} />
+              <span>Campus Admin</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 3. SIGN IN MODE */}
         {authMode === "login" && (
           <>
             <span className="kicker">AUTHENTICATION & ACCESS</span>
@@ -927,8 +1159,9 @@ function LoginModal({
                 className="mt-1"
               />
 
-              <button className="primary-button mt-4" type="submit">
-                Sign in as {role === "admin" ? "Campus Admin" : "Student (User)"} <Icon name="arrow" size={17} />
+              <button className="primary-button mt-4" type="submit" disabled={loginLoading}>
+                {loginLoading ? "Authenticating..." : `Sign in as ${role === "admin" ? "Campus Admin" : "Student (User)"}`}{" "}
+                <Icon name="arrow" size={17} />
               </button>
 
               <div className="text-center pt-3 border-t border-slate-100 mt-4 text-xs font-medium text-slate-600">
@@ -945,113 +1178,33 @@ function LoginModal({
                 </button>
               </div>
             </form>
-
-            <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #f1f5f9", display: "grid", gap: "8px" }}>
-              <small style={{ color: "#64748b", fontWeight: 700, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.5px", fontSize: "10px" }}>
-                Quick Demo Shortcuts
-              </small>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                <button
-                  type="button"
-                  className="outline-button"
-                  style={{
-                    fontSize: "11px",
-                    padding: "8px 6px",
-                    minHeight: "36px",
-                    background: role === "student" ? "#fff8db" : "white",
-                    borderColor: role === "student" ? "#f5b800" : "#e2e8f0",
-                    color: "#1e293b",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px"
-                  }}
-                  onClick={() => onSubmit("student", "aarav.k@campus.edu")}
-                >
-                  <Icon name="users" size={14} /> Student Login
-                </button>
-                <button
-                  type="button"
-                  className="outline-button"
-                  style={{
-                    fontSize: "11px",
-                    padding: "8px 6px",
-                    minHeight: "36px",
-                    background: role === "admin" ? "#fff8db" : "white",
-                    borderColor: role === "admin" ? "#f5b800" : "#e2e8f0",
-                    color: "#1e293b",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px"
-                  }}
-                  onClick={() => onSubmit("admin", "admin@campus.edu")}
-                >
-                  <Icon name="grid" size={14} /> Admin Login
-                </button>
-              </div>
-            </div>
           </>
         )}
 
-        {/* 2. REGISTER MODE (EMAIL OTP VERIFICATION FLOW) */}
+        {/* 4. STUDENT REGISTRATION MODE (EMAIL OTP + REAL-TIME USERNAME CHECK) */}
         {authMode === "register" && (
           <>
             <span className="kicker">STUDENT REGISTRATION</span>
-            <h2>Create verified account</h2>
-            <p>Verify your official campus email via OTP to unlock clans and hackathons.</p>
+            <h2>Create verified student account</h2>
+            <p>Verify your official campus email via 6-digit OTP to unlock clans and hackathons.</p>
 
             <form onSubmit={submitRegister} className="space-y-3 mt-4 text-left">
               {regError && <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">{regError}</div>}
               {regStatusMsg && <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">{regStatusMsg}</div>}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="text-xs font-bold text-slate-700">
-                  Full Name
-                  <input
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    placeholder="e.g. Aarav Khanna"
-                    required
-                  />
-                </label>
-                <label className="text-xs font-bold text-slate-700">
-                  Department
-                  <input
-                    value={regDept}
-                    onChange={(e) => setRegDept(e.target.value)}
-                    placeholder="School of Engineering"
-                    required
-                  />
-                </label>
-              </div>
+              {/* Step 1: Email + OTP Verification Box */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-amber-950 uppercase tracking-wider block">
+                    1. College Email OTP Verification
+                  </label>
+                  {otpVerified && (
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center gap-1">
+                      ✓ Verified
+                    </span>
+                  )}
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="text-xs font-bold text-slate-700">
-                  Branch / Major
-                  <input
-                    value={regBranch}
-                    onChange={(e) => setRegBranch(e.target.value)}
-                    placeholder="B.Tech CSE"
-                    required
-                  />
-                </label>
-                <label className="text-xs font-bold text-slate-700">
-                  Desired Username
-                  <input
-                    value={regUsername}
-                    onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
-                    placeholder="aaravkhanna"
-                    required
-                  />
-                </label>
-              </div>
-
-              {/* Email + OTP Verification Row */}
-              <div className="p-3 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-2">
-                <label className="text-xs font-black text-amber-950 uppercase tracking-wider block">
-                  1. Verify Campus Email Address
-                </label>
                 <div className="flex gap-2">
                   <input
                     type="email"
@@ -1070,7 +1223,7 @@ function LoginModal({
                     type="button"
                     onClick={handleSendOtp}
                     disabled={otpSending || otpVerified}
-                    className="px-3 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                    className="px-3.5 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all disabled:opacity-50 cursor-pointer shrink-0"
                   >
                     {otpSending ? "Sending..." : otpSent ? "Resend OTP" : "Send OTP"}
                   </button>
@@ -1083,7 +1236,7 @@ function LoginModal({
                       maxLength={6}
                       value={regOtp}
                       onChange={(e) => setRegOtp(e.target.value)}
-                      placeholder="Enter 6-digit OTP"
+                      placeholder="Enter 6-digit OTP (e.g. 123456)"
                       className="flex-1 text-xs tracking-widest font-mono font-bold"
                     />
                     <button
@@ -1092,18 +1245,84 @@ function LoginModal({
                       disabled={otpVerifying}
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
                     >
-                      {otpVerifying ? "Checking..." : "Verify OTP"}
+                      {otpVerifying ? "Verifying..." : "Verify OTP"}
                     </button>
                   </div>
                 )}
-                {otpVerified && (
-                  <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 pt-0.5">
-                    ✓ Email verified and ready for account creation.
-                  </span>
-                )}
               </div>
 
-              {/* Password Fields */}
+              {/* Step 2: Student Details & Live Username Check */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="text-xs font-bold text-slate-700">
+                  Full Name
+                  <input
+                    value={regName}
+                    onChange={(e) => setRegName(e.target.value)}
+                    placeholder="e.g. Aarav Khanna"
+                    required
+                  />
+                </label>
+
+                <label className="text-xs font-bold text-slate-700">
+                  Department
+                  <select
+                    value={regDept}
+                    onChange={(e) => setRegDept(e.target.value)}
+                    className="w-full mt-1 p-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white"
+                  >
+                    <option value="School of Engineering">School of Engineering</option>
+                    <option value="School of Computer Applications">School of Computer Applications</option>
+                    <option value="School of Management">School of Management</option>
+                    <option value="School of Design & Arts">School of Design & Arts</option>
+                    <option value="School of Applied Sciences">School of Applied Sciences</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="text-xs font-bold text-slate-700">
+                  Branch / Major
+                  <input
+                    value={regBranch}
+                    onChange={(e) => setRegBranch(e.target.value)}
+                    placeholder="B.Tech CSE"
+                    required
+                  />
+                </label>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Desired Username</label>
+                    {usernameCheck.checking && (
+                      <span className="text-[10px] text-slate-500 font-semibold animate-pulse">Checking...</span>
+                    )}
+                  </div>
+                  <input
+                    value={regUsername}
+                    onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                    placeholder="aaravkhanna"
+                    required
+                    className={`mt-1 ${
+                      usernameCheck.available === true
+                        ? "border-emerald-500 bg-emerald-50/20"
+                        : usernameCheck.available === false
+                        ? "border-rose-500 bg-rose-50/20"
+                        : ""
+                    }`}
+                  />
+                  {usernameCheck.message && (
+                    <span
+                      className={`text-[11px] font-bold block pt-1 ${
+                        usernameCheck.available ? "text-emerald-700" : "text-rose-600"
+                      }`}
+                    >
+                      {usernameCheck.message}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 3: Password Credentials */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <label className="text-xs font-bold text-slate-700">
                   Password (min 8 chars)
@@ -1129,14 +1348,15 @@ function LoginModal({
 
               <button
                 type="submit"
-                disabled={!otpVerified}
+                disabled={!otpVerified || regLoading || usernameCheck.available === false}
                 className="primary-button w-full mt-3 !py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Student Account <Icon name="arrow" size={16} />
+                {regLoading ? "Creating Account..." : "Complete Registration & Sign In"}{" "}
+                <Icon name="arrow" size={16} />
               </button>
 
               <div className="text-center pt-2 text-xs font-medium text-slate-600">
-                Already registered?{" "}
+                Already have an account?{" "}
                 <button
                   type="button"
                   onClick={() => setAuthMode("login")}
@@ -1149,67 +1369,109 @@ function LoginModal({
           </>
         )}
 
-        {/* 3. FORGOT PASSWORD MODE */}
+        {/* 5. FORGOT / RESET PASSWORD WITH OTP MODE */}
         {authMode === "forgot" && (
           <>
             <span className="kicker">ACCOUNT RECOVERY</span>
-            <h2>Reset your password</h2>
-            <p>Enter your registered email to receive an OTP and set a new password.</p>
+            <h2>Reset your password with OTP</h2>
+            <p>Enter your registered college email to verify OTP and set a new password.</p>
 
             <form onSubmit={submitForgot} className="space-y-3 mt-4 text-left">
               {forgotError && <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">{forgotError}</div>}
               {forgotStatusMsg && <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">{forgotStatusMsg}</div>}
 
+              {/* Step 1: Request Reset OTP */}
               <label className="text-xs font-bold text-slate-700">
-                Registered Campus Email
+                Registered College Email
                 <div className="flex gap-2 mt-1">
                   <input
                     type="email"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     placeholder="student@campus.edu"
+                    disabled={forgotOtpVerified}
                     className="flex-1 text-xs"
                     required
                   />
                   <button
                     type="button"
                     onClick={handleForgotSendOtp}
-                    className="px-3 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
+                    disabled={forgotSending || forgotOtpVerified}
+                    className="px-3.5 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50"
                   >
-                    Send OTP
+                    {forgotSending ? "Sending..." : forgotOtpSent ? "Resend OTP" : "Send OTP"}
                   </button>
                 </div>
               </label>
 
-              {forgotOtpSent && (
-                <>
-                  <label className="text-xs font-bold text-slate-700">
-                    6-Digit Verification OTP
+              {/* Step 2: Verify Reset OTP */}
+              {forgotOtpSent && !forgotOtpVerified && (
+                <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2">
+                  <label className="text-xs font-bold text-amber-950">
+                    Enter 6-Digit Reset OTP (Demo: 123456)
+                  </label>
+                  <div className="flex gap-2">
                     <input
                       type="text"
                       maxLength={6}
                       value={forgotOtp}
                       onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder="e.g. 123456"
-                      className="mt-1 font-mono tracking-wider text-xs"
+                      placeholder="123456"
+                      className="flex-1 text-xs font-mono tracking-widest font-bold"
                       required
                     />
-                  </label>
+                    <button
+                      type="button"
+                      onClick={handleForgotVerifyOtp}
+                      disabled={forgotVerifying}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
+                    >
+                      {forgotVerifying ? "Verifying..." : "Verify OTP"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                  <label className="text-xs font-bold text-slate-700">
-                    New Password
-                    <input
-                      type="password"
-                      value={forgotPassword}
-                      onChange={(e) => setForgotPassword(e.target.value)}
-                      placeholder="Enter at least 8 characters"
-                      className="mt-1"
-                      required
-                    />
-                  </label>
+              {/* Step 3: Set New Password */}
+              {forgotOtpVerified && (
+                <>
+                  <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                    ✓ OTP Verified! Set your new password below.
+                  </div>
 
-                  <button type="submit" className="primary-button w-full mt-3 !py-3">
-                    Reset & Sign In <Icon name="check" size={16} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      New Password (min 8 chars)
+                      <input
+                        type="password"
+                        value={forgotPassword}
+                        onChange={(e) => setForgotPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="mt-1"
+                        required
+                      />
+                    </label>
+
+                    <label className="text-xs font-bold text-slate-700">
+                      Confirm New Password
+                      <input
+                        type="password"
+                        value={forgotConfirmPassword}
+                        onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="mt-1"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotResetting}
+                    className="primary-button w-full mt-3 !py-3"
+                  >
+                    {forgotResetting ? "Updating Password..." : "Reset Password & Sign In"}{" "}
+                    <Icon name="check" size={16} />
                   </button>
                 </>
               )}
