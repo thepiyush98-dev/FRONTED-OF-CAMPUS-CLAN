@@ -1000,33 +1000,44 @@ function LoginModal({
   }
 
   return (
-    <div className="modal-backdrop backdrop-blur-md bg-[#0c0d20]/80 flex flex-col items-center justify-center p-4 overflow-y-auto" onMouseDown={onClose}>
+    <div className="modal-backdrop backdrop-blur-md bg-slate-950/75 flex flex-col items-center justify-center p-4 overflow-y-auto" onMouseDown={onClose}>
       <div
         className={`relative w-full ${
-          authMode === "register" ? "max-w-lg" : "max-w-[400px]"
+          authMode === "register" ? "max-w-lg" : "max-w-[420px]"
         } my-auto animate-modal-up`}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <section className="relative w-full bg-white rounded-3xl p-8 sm:p-9 shadow-2xl border border-slate-100/90 text-left max-h-[88vh] overflow-y-auto">
-          {/* Floating Close Button */}
-          <button
-            className="absolute top-5 right-5 z-30 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <Icon name="close" size={15} />
-          </button>
+        <section className="relative w-full bg-white/95 backdrop-blur-xl rounded-3xl p-7 sm:p-9 shadow-2xl border border-slate-200/90 text-left max-h-[88vh] overflow-y-auto">
+          {/* Top Brand Header with Campus Clans Logo */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="logo !text-lg select-none">
+              <span className="logo-mark !w-7 !h-7 !pb-1 shadow-sm">
+                <i /><i /><i />
+              </span>
+              <strong className="!text-lg font-heading">
+                Campus <span className="text-amber-500">Clans</span>
+              </strong>
+            </div>
 
-          {/* 1. SIGN IN VIEW (EXACT MATCH OF IMAGE 2) */}
+            <button
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <Icon name="close" size={15} />
+            </button>
+          </div>
+
+          {/* 1. SIGN IN VIEW (CAMPUS CLAN BRAND THEME & FEATURES) */}
           {authMode === "login" && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight font-heading">
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
                   Sign In
                 </h2>
-                <p className="text-xs text-slate-500 font-medium mt-1">
-                  Welcome back! Please sign in to your account below.
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Welcome back! Enter your campus username or college email.
                 </p>
               </div>
 
@@ -1040,7 +1051,7 @@ function LoginModal({
                 {/* Email / Username */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-800 block">
-                    Email
+                    Campus Username or Email
                   </label>
                   <input
                     value={loginEmail}
@@ -1048,8 +1059,8 @@ function LoginModal({
                       setLoginEmail(e.target.value)
                       setLoginError("")
                     }}
-                    placeholder="Enter your email..."
-                    className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-400"
+                    placeholder="e.g. aaravk or student@campus.edu"
+                    className="w-full p-3 rounded-xl border border-slate-200 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition-all placeholder:text-slate-400 font-medium"
                     autoFocus
                     required
                   />
@@ -1065,7 +1076,7 @@ function LoginModal({
                         setAuthMode("forgot")
                         setForgotEmail(loginEmail)
                       }}
-                      className="text-xs text-slate-500 hover:text-indigo-600 font-medium cursor-pointer transition-colors"
+                      className="text-xs text-amber-600 hover:text-amber-700 font-bold cursor-pointer transition-colors"
                     >
                       Forgot password?
                     </button>
@@ -1076,7 +1087,7 @@ function LoginModal({
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full p-3 pr-10 rounded-xl border border-slate-200 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-400"
+                      className="w-full p-3 pr-10 rounded-xl border border-slate-200 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition-all placeholder:text-slate-400 font-medium"
                       required
                     />
                     <button
@@ -1090,65 +1101,57 @@ function LoginModal({
                   </div>
                 </div>
 
-                {/* Purple Sign In Button matching Image 2 */}
+                {/* Signature Campus Clans Golden Primary Button */}
                 <button
                   type="submit"
                   disabled={loginLoading}
-                  style={{ backgroundColor: "#6155ea", color: "#ffffff" }}
-                  className="w-full py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#5244ca] active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
+                  className="primary-button w-full !py-3.5 !rounded-xl !text-xs !font-black !shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
                 >
-                  <span>{loginLoading ? "Signing in..." : "Sign in"}</span>
-                </button>
-
-                {/* Sign in with Google Button matching Image 2 */}
-                <button
-                  type="button"
-                  onClick={() => onSubmit("student", "aarav.k@campus.edu")}
-                  className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-98"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                  </svg>
-                  <span>Sign in with Google</span>
+                  <span>{loginLoading ? "Signing in..." : "Sign In to Campus Clans"}</span>
+                  <Icon name="arrow" size={15} />
                 </button>
               </form>
 
-              {/* Minimal Demo 1-Click Access */}
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                <span>Quick Demo:</span>
-                <div className="flex gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => onSubmit("student", "aarav.k@campus.edu")}
-                    className="text-slate-600 hover:text-indigo-600 underline font-bold cursor-pointer"
-                  >
-                    Student Demo
-                  </button>
-                  <span>•</span>
-                  <button
-                    type="button"
-                    onClick={() => onSubmit("admin", "admin@campus.edu")}
-                    className="text-slate-600 hover:text-indigo-600 underline font-bold cursor-pointer"
-                  >
-                    Admin Demo
-                  </button>
+              {/* Divider & Quick Demo Testing Access */}
+              <div className="relative my-3 pt-1">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200/80" />
                 </div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-white/95 px-2">
+                  Quick Demo Access
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSubmit("student", "aarav.k@campus.edu")}
+                  className="py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-amber-50/50 border border-slate-200 hover:border-amber-300 font-bold text-xs text-slate-700 hover:text-amber-900 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                  title="Instant Login as Student (User)"
+                >
+                  <span>🎓 Student Demo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSubmit("admin", "admin@campus.edu")}
+                  className="py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-amber-50/50 border border-slate-200 hover:border-amber-300 font-bold text-xs text-slate-700 hover:text-amber-900 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                  title="Instant Login as Campus Admin"
+                >
+                  <span>🛡️ Admin Demo</span>
+                </button>
               </div>
             </div>
           )}
 
-          {/* 2. SIGN UP / REGISTRATION VIEW (EXACT MATCH OF IMAGE 1) */}
+          {/* 2. SIGN UP / REGISTRATION VIEW (CAMPUS CLAN BRAND THEME & BACKEND MODULES) */}
           {authMode === "register" && (
             <div className="space-y-4">
               <div>
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
-                  Create an Account
+                  Student Registration
                 </h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Verify college email & register with campus credentials.
+                  Verify your college email with OTP & set your campus credentials.
                 </p>
               </div>
 
@@ -1223,7 +1226,7 @@ function LoginModal({
                   )}
                 </div>
 
-                {/* Exact Fields from Image 1: Full Name & Department */}
+                {/* 2-Column Student Profile Fields */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-800 block">Full Name</label>
@@ -1251,7 +1254,7 @@ function LoginModal({
                   </div>
                 </div>
 
-                {/* Exact Fields from Image 1: Branch / Major & Desired Username */}
+                {/* Branch / Major & Desired Username with live check */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-800 block">Branch / Major</label>
@@ -1295,7 +1298,7 @@ function LoginModal({
                   </div>
                 </div>
 
-                {/* Exact Fields from Image 1: Password (min 8 chars) with yellow border & Confirm Password */}
+                {/* Password & Confirm Password */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-800 block">Password (min 8 chars)</label>
@@ -1321,21 +1324,20 @@ function LoginModal({
                   </div>
                 </div>
 
-                {/* Submit Button exactly matching Image 1: Create Account & Sign In -> in yellow */}
+                {/* Submit Button in Campus Clan Primary Golden Theme */}
                 <button
                   type="submit"
                   disabled={!otpVerified || regLoading || usernameCheck.available === false}
-                  style={{ backgroundColor: "#fde047", color: "#451a03" }}
-                  className="w-full py-3.5 rounded-xl font-bold text-xs shadow-sm hover:brightness-105 active:scale-98 transition-all cursor-pointer border border-amber-300 flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="primary-button w-full !py-3.5 !rounded-xl !text-xs !font-black !shadow-md flex items-center justify-center gap-2 cursor-pointer mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>{regLoading ? "Creating Account..." : "Create Account & Sign In"}</span>
-                  <span>→</span>
+                  <Icon name="arrow" size={15} />
                 </button>
               </form>
             </div>
           )}
 
-          {/* 3. FORGOT PASSWORD VIEW */}
+          {/* 3. FORGOT PASSWORD VIEW (OTP BASED) */}
           {authMode === "forgot" && (
             <div className="space-y-4">
               <div>
@@ -1446,11 +1448,10 @@ function LoginModal({
                     <button
                       type="submit"
                       disabled={forgotResetting}
-                      style={{ backgroundColor: "#fde047", color: "#451a03" }}
-                      className="w-full py-3.5 rounded-xl font-bold text-xs shadow-sm hover:brightness-105 active:scale-98 transition-all cursor-pointer border border-amber-300 flex items-center justify-center gap-2 mt-2"
+                      className="primary-button w-full !py-3.5 !rounded-xl !text-xs !font-black !shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
                     >
                       <span>{forgotResetting ? "Updating..." : "Reset Password & Sign In"}</span>
-                      <span>→</span>
+                      <Icon name="arrow" size={15} />
                     </button>
                   </div>
                 )}
@@ -1459,46 +1460,48 @@ function LoginModal({
           )}
         </section>
 
-        {/* Bottom Switcher Caption on dark backdrop outside card (EXACT MATCH OF IMAGE 2) */}
-        {authMode === "login" && (
-          <p className="text-center pt-3 text-xs text-slate-300 font-medium">
-            New to Campus Clans?{" "}
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode("register")
-                setRegEmail(loginEmail)
-              }}
-              className="text-[#998af8] hover:text-white font-bold hover:underline cursor-pointer ml-1"
-            >
-              Request demo today.
-            </button>
-          </p>
-        )}
-        {authMode === "register" && (
-          <p className="text-center pt-3 text-xs text-slate-300 font-medium">
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={() => setAuthMode("login")}
-              className="text-amber-300 hover:text-amber-100 font-bold hover:underline cursor-pointer ml-1"
-            >
-              Sign in
-            </button>
-          </p>
-        )}
-        {authMode === "forgot" && (
-          <p className="text-center pt-3 text-xs text-slate-300 font-medium">
-            Remember your password?{" "}
-            <button
-              type="button"
-              onClick={() => setAuthMode("login")}
-              className="text-amber-300 hover:text-amber-100 font-bold hover:underline cursor-pointer ml-1"
-            >
-              Sign in
-            </button>
-          </p>
-        )}
+        {/* Minimal Instagram-style Switcher box */}
+        <div className="mt-3.5 p-3.5 rounded-2xl border border-white/10 bg-slate-900/80 backdrop-blur-md text-center text-xs text-slate-300 font-medium shadow-lg">
+          {authMode === "login" && (
+            <>
+              Don't have a campus account?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("register")
+                  setRegEmail(loginEmail)
+                }}
+                className="text-amber-400 hover:text-amber-300 font-black hover:underline cursor-pointer ml-1"
+              >
+                Register as Student
+              </button>
+            </>
+          )}
+          {authMode === "register" && (
+            <>
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setAuthMode("login")}
+                className="text-amber-400 hover:text-amber-300 font-black hover:underline cursor-pointer ml-1"
+              >
+                Sign in
+              </button>
+            </>
+          )}
+          {authMode === "forgot" && (
+            <>
+              Remember your password?{" "}
+              <button
+                type="button"
+                onClick={() => setAuthMode("login")}
+                className="text-amber-400 hover:text-amber-300 font-black hover:underline cursor-pointer ml-1"
+              >
+                Back to Sign in
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
