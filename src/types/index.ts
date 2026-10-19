@@ -214,6 +214,14 @@ export interface ClanStoryItem {
   expiresAt?: string
 }
 
+export interface PostLiker {
+  id: string
+  name: string
+  avatar: string
+  branch: string
+  likedAt: string
+}
+
 export interface ClanPostItem {
   id: string | number
   clanId: string | number
@@ -229,6 +237,9 @@ export interface ClanPostItem {
   isLiked: boolean
   commentsCount: number
   createdAt: string
+  isAnnouncement?: boolean
+  tags?: string[]
+  likers?: PostLiker[]
 }
 
 export interface ProjectUpdateItem {
@@ -255,6 +266,7 @@ export interface ProjectItem {
   assignedMembers?: string[]
   updates: ProjectUpdateItem[]
   createdAt: string
+  tags?: string[]
 }
 
 export interface ClanRecruitmentItem {

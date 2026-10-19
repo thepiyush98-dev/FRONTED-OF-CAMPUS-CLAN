@@ -14,6 +14,8 @@ import { useAuth } from "@/context/AuthContext"
 import EventDetailsModal, { DetailedEvent } from "@/components/events/EventDetailsModal"
 import CreateClanModal from "@/components/community/CreateClanModal"
 import { djangoApi } from "@/services/djangoApi"
+import { ALL_STUDENT_PROFILES } from "@/data/studentProfilesData"
+import ClanStoriesStrip from "@/components/community/ClanStoriesStrip"
 
 type AdminPage = "overview" | "community" | "events" | "trophies" | "reports"
 type StudentPage = "home" | "clans" | "events" | "posts" | "profile" | "messages" | "clan-profile"
@@ -2399,6 +2401,9 @@ function StudentHome({
         subtitle="Connect · Collaborate · Grow with top campus initiatives"
       />
 
+      {/* CLAN STORIES (24H SPRINT STORIES & BEHIND-THE-SCENES) */}
+      <ClanStoriesStrip onOpenClan={onOpenClan} />
+
       {/* 3. CLANS SECTION (CAMPUS CLANS SHOWCASE) */}
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -3063,16 +3068,16 @@ function StudentEvents({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleToggleEvent(event.id as number)
+                    handleCardClick(event)
                   }}
                   className={`flex-1 py-2.5 px-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     isGoing
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100"
                       : "primary-button !w-full"
                   }`}
                 >
                   <Icon name={isGoing ? "check" : "calendar"} size={14} />
-                  <span>{isGoing ? "You're Going" : event.hasRegistration ? "Register" : "Interested"}</span>
+                  <span>{isGoing ? "✓ Registered (Manage / Cancel)" : event.hasRegistration ? "Register / Enter" : "Interested"}</span>
                 </button>
               </div>
             </article>
@@ -3087,6 +3092,19 @@ function StudentEvents({
         onClose={() => setLocalModalEvent(null)}
         isInterested={localModalEvent ? activeJoinedList.includes(localModalEvent.id as number) : false}
         onToggleInterested={(id) => handleToggleEvent(Number(id))}
+        userClanName="Pixel Pirates"
+        currentUserRole="Leader"
+        onRegistrationChange={(id, isReg) => {
+          const numId = Number(id)
+          if (onToggleJoin) {
+            if (isReg && !joined.includes(numId)) onToggleJoin(numId)
+            else if (!isReg && joined.includes(numId)) onToggleJoin(numId)
+          } else {
+            setLocalJoined((prev) =>
+              isReg ? (prev.includes(numId) ? prev : [...prev, numId]) : prev.filter((x) => x !== numId)
+            )
+          }
+        }}
       />
 
       {filteredEvents.length === 0 && (
@@ -3229,15 +3247,29 @@ function StudentMessages() {
 
 function StudentProfile({
   onOpenClan,
+  studentId,
+  onBackToOwnProfile,
+  onOpenStudent,
 }: {
   onOpenClan?: (clanName: string) => void
+  studentId?: string | null
+  onBackToOwnProfile?: () => void
+  onOpenStudent?: (studentId: string) => void
 }) {
-  return <Profile onOpenClan={onOpenClan} />
+  return (
+    <Profile
+      onOpenClan={onOpenClan}
+      viewStudentId={studentId}
+      onBackToOwnProfile={onBackToOwnProfile}
+      onOpenStudent={onOpenStudent}
+    />
+  )
 }
 
 function StudentApp({ onLogout }: { onLogout: () => void }) {
   const [page, setPage] = useState<StudentPage>("home")
   const [selectedClan, setSelectedClan] = useState<string>("Pixel Pirates")
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [showSearchModal, setShowSearchModal] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [selectedEventModal, setSelectedEventModal] = useState<DetailedEvent | null>(null)
@@ -3252,6 +3284,11 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
   const handleOpenClan = (clanName: string) => {
     setSelectedClan(clanName)
     setPage("clan-profile")
+  }
+
+  const handleOpenStudent = (studentId: string) => {
+    setSelectedStudentId(studentId)
+    setPage("profile")
   }
 
   const items: { page: StudentPage; label: string; icon: string }[] = [
@@ -3280,7 +3317,12 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
                     : ""
                 }
                 type="button"
-                onClick={() => setPage(item.page)}
+                onClick={() => {
+                  if (item.page === "profile") {
+                    setSelectedStudentId(null)
+                  }
+                  setPage(item.page)
+                }}
                 key={item.page}
               >
                 <Icon name={item.icon} />
@@ -3346,11 +3388,26 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
           />
         )}
         {(page === "posts" || page === "messages") && <PostsView />}
-        {page === "profile" && <StudentProfile onOpenClan={handleOpenClan} />}
+        {page === "profile" && (
+          <StudentProfile
+            onOpenClan={handleOpenClan}
+            studentId={selectedStudentId}
+            onBackToOwnProfile={() => setSelectedStudentId(null)}
+            onOpenStudent={handleOpenStudent}
+          />
+        )}
         {page === "clan-profile" && (
           <ClanProfile
             clanName={selectedClan}
             onBack={() => setPage("clans")}
+            onNavigateMember={(memberName) => {
+              const found = ALL_STUDENT_PROFILES.find(
+                (s) => s.name.toLowerCase() === memberName.toLowerCase() || s.id === memberName
+              )
+              if (found) {
+                handleOpenStudent(found.id)
+              }
+            }}
           />
         )}
         <StudentFooter
@@ -3372,7 +3429,12 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
         activeId={
           page === "messages" ? "posts" : page === "clan-profile" ? "clans" : page
         }
-        onSelect={(id) => setPage(id as StudentPage)}
+        onSelect={(id) => {
+          if (id === "profile") {
+            setSelectedStudentId(null)
+          }
+          setPage(id as StudentPage)
+        }}
         theme="dark"
       />
 
@@ -3414,6 +3476,14 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
         onClose={() => setSelectedEventModal(null)}
         isInterested={selectedEventModal ? joinedEventIds.includes(Number(selectedEventModal.id)) : false}
         onToggleInterested={(id) => handleToggleJoin(Number(id))}
+        userClanName={selectedClan}
+        currentUserRole="Leader"
+        onRegistrationChange={(id, isReg) => {
+          const numId = Number(id)
+          setJoinedEventIds((prev) =>
+            isReg ? (prev.includes(numId) ? prev : [...prev, numId]) : prev.filter((x) => x !== numId)
+          )
+        }}
       />
     </main>
   )
@@ -3421,7 +3491,7 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
 
 function AdminApp({ onLogout }: { onLogout: () => void }) {
   const [page, setPage] = useState<AdminPage>("overview")
-  const [useAdvanced, setUseAdvanced] = useState(false)
+  const [useAdvanced, setUseAdvanced] = useState(true)
   const [showSearchModal, setShowSearchModal] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
 

@@ -10,6 +10,7 @@ const eventRoutes = require('./routes/events')
 const postRoutes = require('./routes/posts')
 const notificationRoutes = require('./routes/notifications')
 const trophyRoutes = require('./routes/trophies')
+const campusAdminRoutes = require('./routes/campusAdmin')
 
 const app = express()
 
@@ -44,6 +45,9 @@ app.use('/api/events', eventRoutes)
 app.use('/api/posts', postRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/trophies', trophyRoutes)
+app.use('/api/campus-admin', campusAdminRoutes)
+app.use('/campus-admin', campusAdminRoutes)
+app.use('/event', eventRoutes)
 
 // 404 handler for unmatched API routes
 app.use('/api/*', (req, res) => {

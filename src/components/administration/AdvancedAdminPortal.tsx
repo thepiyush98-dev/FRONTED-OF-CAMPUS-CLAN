@@ -76,6 +76,7 @@ export default function AdvancedAdminPortal({
   const [trophies, setTrophies] = useState<Trophy[]>(INITIAL_TROPHIES)
   const [messages, setMessages] = useState<CampusMessage[]>(INITIAL_MESSAGES)
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS)
+  const [participantsByEvent, setParticipantsByEvent] = useState<Record<string, EventParticipant[]>>(INITIAL_PARTICIPANTS)
 
   // Asynchronous AJAX Initial Hydration via api service
   useEffect(() => {
@@ -728,6 +729,11 @@ export default function AdvancedAdminPortal({
               clanProjects={clans.reduce((sum, c) => sum + c.projectsCount, 0)}
               studentProjects={students.reduce((sum, s) => sum + s.projectsCount, 0)}
               upcomingEvents={events.filter((e) => e.status !== "Ended").length}
+              students={students}
+              clans={clans}
+              events={events}
+              trophies={trophies}
+              auditLogs={auditLogs}
             />
           )}
 
@@ -845,8 +851,38 @@ export default function AdvancedAdminPortal({
       <ParticipantsModal
         isOpen={!!participantReviewEvent}
         event={participantReviewEvent}
-        participants={INITIAL_PARTICIPANTS[participantReviewEvent?.id || ""] || []}
+        participants={participantsByEvent[participantReviewEvent?.id || ""] || []}
+        students={students}
+        clans={clans}
         onClose={() => setParticipantReviewEvent(null)}
+        onAddParticipant={(newPart) => {
+          if (!participantReviewEvent) return
+          const eventId = participantReviewEvent.id
+          setParticipantsByEvent((prev) => ({
+            ...prev,
+            [eventId]: [newPart, ...(prev[eventId] || [])],
+          }))
+          setEvents((prev) =>
+            prev.map((e) =>
+              e.id === eventId ? { ...e, participantsCount: e.participantsCount + 1 } : e
+            )
+          )
+          showToast(`Participant "${newPart.name}" added to ${participantReviewEvent.title}.`)
+        }}
+        onCancelParticipation={(participantId) => {
+          if (!participantReviewEvent) return
+          const eventId = participantReviewEvent.id
+          setParticipantsByEvent((prev) => ({
+            ...prev,
+            [eventId]: (prev[eventId] || []).filter((p) => p.id !== participantId),
+          }))
+          setEvents((prev) =>
+            prev.map((e) =>
+              e.id === eventId ? { ...e, participantsCount: Math.max(0, e.participantsCount - 1) } : e
+            )
+          )
+          showToast(`Participation entry removed.`)
+        }}
       />
 
       {/* Section 10 Award Trophy Modal */}

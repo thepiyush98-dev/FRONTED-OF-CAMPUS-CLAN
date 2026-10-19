@@ -39,6 +39,13 @@ import {
   INITIAL_MESSAGES,
   INITIAL_AUDIT_LOGS,
 } from "@/data/mockData"
+import {
+  ALL_STUDENT_PROFILES,
+  getStudentProfileById,
+  getSkillsDirectoryWithCounts,
+  searchStudents as searchStudentsHelper,
+  CAMPUS_SKILLS_DIRECTORY,
+} from "@/data/studentProfilesData"
 
 const DJANGO_URL = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "")
 
@@ -235,13 +242,13 @@ export const DjangoAuth = {
 export const DjangoProfile = {
   /** Get own profile (GET /profile/) */
   async getMyProfile(): Promise<any> {
-    return djangoFetch("/profile/", { method: "GET" }, () => INITIAL_STUDENTS[0])
+    return djangoFetch("/profile/", { method: "GET" }, () => ALL_STUDENT_PROFILES[0])
   },
 
-  /** View student profile by ID (GET /profile/<id>/) */
+  /** View student profile by ID (GET /profile/<id>/ or GET /student/<id>/) */
   async getStudent(studentId: number | string): Promise<any> {
-    return djangoFetch(`/profile/${studentId}/`, { method: "GET" }, () =>
-      INITIAL_STUDENTS.find((s) => s.id === String(studentId)) || INITIAL_STUDENTS[0]
+    return djangoFetch(`/student/${studentId}/`, { method: "GET" }, () =>
+      getStudentProfileById(String(studentId)) || ALL_STUDENT_PROFILES.find((s) => s.id === String(studentId)) || ALL_STUDENT_PROFILES[0]
     )
   },
 
@@ -251,28 +258,19 @@ export const DjangoProfile = {
     return djangoFetch("/profile/edit/", { method: "POST", body }, () => ({ success: true }))
   },
 
-  /** Fetch skills for a category/type (GET /skills/<type_id>/) */
-  async getSkills(skillTypeId: number): Promise<any[]> {
-    return djangoFetch(`/skills/${skillTypeId}/`, { method: "GET" }, () => [
-      { id: 1, name: "React 19" },
-      { id: 2, name: "Tailwind CSS v4" },
-      { id: 3, name: "TypeScript" },
-      { id: 4, name: "Python & Django" },
-      { id: 5, name: "Figma UI/UX" },
-    ])
+  /** Fetch skills directory with student counts (GET /skills/ or GET /skills/<type_id>/) */
+  async getSkills(skillTypeId?: number | string): Promise<any[]> {
+    return djangoFetch(skillTypeId ? `/skills/${skillTypeId}/` : "/skills/", { method: "GET" }, () =>
+      getSkillsDirectoryWithCounts()
+    )
   },
 
-  /** Real-time student search (GET /student-search/?q=...) */
-  async searchStudents(query: string): Promise<Student[]> {
-    return djangoFetch<Student[]>(
-      `/student-search/?q=${encodeURIComponent(query)}`,
+  /** Real-time student search (GET /search-students/?q=... or GET /student-search/?q=...) */
+  async searchStudents(query: string, category?: string, clan?: string, department?: string): Promise<any[]> {
+    return djangoFetch<any[]>(
+      `/search-students/?q=${encodeURIComponent(query)}`,
       { method: "GET" },
-      () =>
-        INITIAL_STUDENTS.filter(
-          (s) =>
-            s.name.toLowerCase().includes(query.toLowerCase()) ||
-            s.skills.some((sk) => sk.toLowerCase().includes(query.toLowerCase()))
-        )
+      () => searchStudentsHelper(query, category, clan, department)
     )
   },
 
@@ -297,18 +295,28 @@ export const DjangoProfile = {
 // ==========================================
 export const DjangoClans = {
   /** Check if clan name is available (GET /check-clan-name/?name=...) */
-  async checkClanName(name: string): Promise<{ available: boolean }> {
-    return djangoFetch<{ available: boolean }>(
+  async checkClanName(name: string): Promise<{ available: boolean; message?: string }> {
+    return djangoFetch<{ available: boolean; message?: string }>(
       `/check-clan-name/?name=${encodeURIComponent(name)}`,
       { method: "GET" },
-      () => ({ available: !INITIAL_CLANS.some((c) => c.name.toLowerCase() === name.toLowerCase()) })
+      () => {
+        const isTaken = INITIAL_CLANS.some((c) => c.name.toLowerCase() === name.toLowerCase())
+        return {
+          available: !isTaken,
+          message: isTaken ? `Clan name "${name}" is already taken.` : `Clan name "${name}" is available!`,
+        }
+      }
     )
   },
 
   /** Create clan (POST /create-clan/) */
-  async createClan(data: FormData | any): Promise<{ success: boolean; clan_id?: number }> {
+  async createClan(data: FormData | any): Promise<{ success: boolean; clan_id?: number; message?: string }> {
     const body = data instanceof FormData ? data : JSON.stringify(data)
-    return djangoFetch("/create-clan/", { method: "POST", body }, () => ({ success: true, clan_id: Date.now() }))
+    return djangoFetch("/create-clan/", { method: "POST", body }, () => ({
+      success: true,
+      clan_id: Date.now(),
+      message: "Clan successfully founded on Campus Clans registry!",
+    }))
   },
 
   /** Fetch clan profile details (GET /clan/<clan_id>/) */
@@ -326,41 +334,120 @@ export const DjangoClans = {
     return djangoFetch(`/clan/${clanId}/edit/`, { method: "POST", body }, () => ({ success: true }))
   },
 
-  /** Change clan member role (POST /clan/<clan_id>/change-role/<member_id>/) */
-  async changeRole(clanId: number | string, memberId: number | string, role: string): Promise<{ success: boolean }> {
+  /** Change clan member role (POST /clan/<name>/change-role/ or /clan/<id>/change-role/<member_id>/) */
+  async changeRole(
+    clanIdentifier: number | string,
+    memberId: number | string,
+    role: "Leader" | "Co-Leader" | "Elder" | "Member" | string
+  ): Promise<{ success: boolean; message?: string }> {
     const formData = new FormData()
+    formData.append("member_id", String(memberId))
     formData.append("role", role)
-    return djangoFetch(`/clan/${clanId}/change-role/${memberId}/`, { method: "POST", body: formData }, () => ({
-      success: true,
-    }))
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanIdentifier))}/change-role/`,
+      { method: "POST", body: formData },
+      () => ({
+        success: true,
+        message: `Member role updated to ${role}.`,
+      })
+    )
   },
 
-  /** Remove member from clan (POST /clan/<clan_id>/remove-member/<member_id>/) */
-  async removeMember(clanId: number | string, memberId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan/${clanId}/remove-member/${memberId}/`, { method: "POST" }, () => ({ success: true }))
+  /** Remove member from clan (POST /clan/<name>/remove-member/) */
+  async removeMember(
+    clanIdentifier: number | string,
+    memberId: number | string,
+    reason?: string
+  ): Promise<{ success: boolean; message?: string }> {
+    const formData = new FormData()
+    formData.append("member_id", String(memberId))
+    if (reason) formData.append("reason", reason)
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanIdentifier))}/remove-member/`,
+      { method: "POST", body: formData },
+      () => ({ success: true, message: "Member removed from clan roster." })
+    )
   },
 
-  /** Send clan join request (POST /clan/<clan_id>/join/) */
-  async sendJoinRequest(clanId: number | string): Promise<{ success: boolean; message?: string }> {
-    return djangoFetch(`/clan/${clanId}/join/`, { method: "POST" }, () => ({
-      success: true,
-      message: "Clan join request submitted to clan leadership.",
-    }))
+  /** Send clan join request (POST /clan/<name>/request-join/) */
+  async sendJoinRequest(clanIdentifier: number | string): Promise<{ success: boolean; message?: string }> {
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanIdentifier))}/request-join/`,
+      { method: "POST" },
+      () => ({
+        success: true,
+        message: "Clan join request submitted to clan leadership.",
+      })
+    )
   },
 
-  /** Cancel clan join request (POST /clan-join-request/<request_id>/cancel/) */
-  async cancelJoinRequest(requestId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan-join-request/${requestId}/cancel/`, { method: "POST" }, () => ({ success: true }))
+  /** Cancel clan join request (POST /cancel-join-request/ or POST /clan/<name>/cancel-join-request/) */
+  async cancelJoinRequest(clanIdentifier: number | string): Promise<{ success: boolean; message?: string }> {
+    const formData = new FormData()
+    formData.append("clan", String(clanIdentifier))
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanIdentifier))}/cancel-join-request/`,
+      { method: "POST", body: formData },
+      () => ({ success: true, message: "Join request cancelled successfully." })
+    )
   },
 
-  /** Request clan leave (POST /clan/<clan_id>/leave-request/) */
-  async requestLeave(clanId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan/${clanId}/leave-request/`, { method: "POST" }, () => ({ success: true }))
+  /** Request leave clan (POST /clan/<name>/request-leave/) */
+  async requestLeave(clanIdentifier: number | string): Promise<{ success: boolean; message?: string }> {
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanIdentifier))}/request-leave/`,
+      { method: "POST" },
+      () => ({ success: true, message: "Left clan successfully." })
+    )
   },
 
-  /** Invite student to clan (POST /clan/<student_id>/invite/) */
-  async sendInvitation(studentId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan/${studentId}/invite/`, { method: "POST" }, () => ({ success: true }))
+  /** Invite student to clan (POST /clan/<name>/invite/) */
+  async sendInvitation(
+    clanIdentifier: number | string,
+    studentIdentifier: number | string,
+    role: string = "Member",
+    message?: string
+  ): Promise<{ success: boolean; message?: string }> {
+    const formData = new FormData()
+    formData.append("student", String(studentIdentifier))
+    formData.append("role", role)
+    if (message) formData.append("message", message)
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanIdentifier))}/invite/`,
+      { method: "POST", body: formData },
+      () => ({
+        success: true,
+        message: `Official clan invitation dispatched to ${studentIdentifier}!`,
+      })
+    )
+  },
+
+  /** Accept clan join request (POST /clan/<name>/accept-join-request/) */
+  async acceptJoinRequest(
+    clanIdentifier: number | string,
+    requestId: number | string
+  ): Promise<{ success: boolean; message?: string }> {
+    const formData = new FormData()
+    formData.append("request_id", String(requestId))
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanIdentifier))}/accept-join-request/`,
+      { method: "POST", body: formData },
+      () => ({ success: true, message: "Student accepted into clan roster!" })
+    )
+  },
+
+  /** Reject clan join request (POST /clan/<name>/reject-join-request/) */
+  async rejectJoinRequest(
+    clanIdentifier: number | string,
+    requestId: number | string
+  ): Promise<{ success: boolean }> {
+    const formData = new FormData()
+    formData.append("request_id", String(requestId))
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanIdentifier))}/reject-join-request/`,
+      { method: "POST", body: formData },
+      () => ({ success: true })
+    )
   },
 
   /** Accept clan invitation (POST /clan-invitation/<invitation_id>/accept/) */
@@ -375,53 +462,71 @@ export const DjangoClans = {
 }
 
 // ==========================================
-// 4. CLAN STORIES SERVICE (Instagram/Snapchat style)
+// ==========================================
+// 4. CLAN STORIES SERVICE (24-Hour Ephemeral Instagram Style)
 // ==========================================
 export const DjangoStories = {
-  /** Create Clan Story (POST /clan/<clan_id>/story/create/save/) */
-  async createStory(clanId: number | string, formData: FormData): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan/${clanId}/story/create/save/`, { method: "POST", body: formData }, () => ({
+  /** Create 24h Ephemeral Clan Story (POST /clan/<name>/story/create/) */
+  async createStory(
+    clanName: string,
+    data: FormData | { caption: string; storyImage: string; tags?: string[] }
+  ): Promise<{ success: boolean; story?: any; message?: string }> {
+    const isFormData = data instanceof FormData
+    const body = isFormData ? data : (() => {
+      const fd = new FormData()
+      fd.append("caption", data.caption)
+      fd.append("image", data.storyImage)
+      if (data.tags) fd.append("tags", JSON.stringify(data.tags))
+      return fd
+    })()
+
+    return djangoFetch(
+      `/clan/${encodeURIComponent(clanName)}/story/create/`,
+      { method: "POST", body },
+      () => ({
+        success: true,
+        message: `24-hour clan story published for ${clanName} (/clan/${clanName}/story/create/)!`,
+      })
+    )
+  },
+
+  /** Record story view (POST /story/<id>/view/) */
+  async recordView(storyId: number | string): Promise<{ success: boolean; viewsCount?: number }> {
+    return djangoFetch(`/story/${storyId}/view/`, { method: "POST" }, () => ({
       success: true,
+      viewsCount: 1,
     }))
   },
 
-  /** View Story (GET /clan-story/<story_id>/) */
-  async viewStory(storyId: number | string): Promise<any> {
-    return djangoFetch(`/clan-story/${storyId}/`, { method: "GET" }, () => ({
-      id: storyId,
-      clanName: "Pixel Pirates",
-      caption: "Deploying our 36-hour hackathon project!",
-      likesCount: 24,
-      viewsCount: 110,
-    }))
-  },
-
-  /** Record story view (POST /story/<story_id>/view/) */
-  async recordView(storyId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/story/${storyId}/view/`, { method: "POST" }, () => ({ success: true }))
-  },
-
-  /** Like/unlike story (POST /story/<story_id>/like/) */
-  async likeStory(storyId: number | string): Promise<{ success: boolean; liked: boolean; like_count: number }> {
-    return djangoFetch(`/story/${storyId}/like/`, { method: "POST" }, () => ({
-      success: true,
-      liked: true,
-      like_count: 25,
-    }))
-  },
-
-  /** Get story viewers (GET /clan-story/<story_id>/viewers/) */
+  /** Get live story viewers list (GET /story/<id>/viewers/) */
   async getViewers(storyId: number | string): Promise<any[]> {
-    return djangoFetch(`/clan-story/${storyId}/viewers/`, { method: "GET" }, () => [
-      { id: 1, name: "Aarav Khanna", avatar: "AK" },
-      { id: 2, name: "Riya Malhotra", avatar: "RM" },
-      { id: 3, name: "Devansh Sharma", avatar: "DS" },
+    return djangoFetch(`/story/${storyId}/viewers/`, { method: "GET" }, () => [
+      { id: "stu-1", name: "Aarav Khanna", avatar: "AK", branch: "B.Tech CSE · 3rd Year", viewedAt: "2m ago", hasLiked: true },
+      { id: "stu-2", name: "Riya Malhotra", avatar: "RM", branch: "B.Tech IT · 3rd Year", viewedAt: "8m ago", hasLiked: true },
+      { id: "stu-3", name: "Devansh Sharma", avatar: "DS", branch: "B.Tech CSE · 3rd Year", viewedAt: "25m ago", hasLiked: false },
+      { id: "stu-4", name: "Simran Kaur", avatar: "SK", branch: "B.Tech AI · 2nd Year", viewedAt: "42m ago", hasLiked: true },
+      { id: "stu-5", name: "Kabir Singh", avatar: "KS", branch: "B.Tech ECE · 4th Year", viewedAt: "1h ago", hasLiked: false },
+      { id: "stu-6", name: "Ananya Roy", avatar: "AR", branch: "B.Tech CSE · 3rd Year", viewedAt: "2h ago", hasLiked: true },
     ])
   },
 
-  /** Delete story (POST /clan-story/<story_id>/delete/) */
-  async deleteStory(storyId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan-story/${storyId}/delete/`, { method: "POST" }, () => ({ success: true }))
+  /** Like/unlike story (POST /story/<id>/like/) */
+  async likeStory(
+    storyId: number | string
+  ): Promise<{ success: boolean; liked: boolean; like_count: number }> {
+    return djangoFetch(`/story/${storyId}/like/`, { method: "POST" }, () => ({
+      success: true,
+      liked: true,
+      like_count: 85,
+    }))
+  },
+
+  /** Delete clan story manually before auto-expiry (POST /story/<id>/delete/) */
+  async deleteStory(storyId: number | string): Promise<{ success: boolean; message?: string }> {
+    return djangoFetch(`/story/${storyId}/delete/`, { method: "POST" }, () => ({
+      success: true,
+      message: `Story #${storyId} deleted successfully (/story/${storyId}/delete/).`,
+    }))
   },
 }
 
@@ -429,100 +534,186 @@ export const DjangoStories = {
 // 5. CLAN POSTS & FEEDS SERVICE
 // ==========================================
 export const DjangoPosts = {
-  /** Get Clan Posts (GET /clan/<clan_id>/posts/) */
-  async getClanPosts(clanId: number | string): Promise<ClanPostItem[]> {
-    return djangoFetch<ClanPostItem[]>(`/clan/${clanId}/posts/`, { method: "GET" }, () => [
-      {
-        id: "post-1",
-        clanId,
-        clanName: "Pixel Pirates",
-        authorId: 1,
-        authorName: "Aarav Khanna",
-        authorRole: "Clan Lead",
-        content: "Released Campus Clans Glassmorphic UI Kit v2 with React 19 and Tailwind CSS v4!",
-        images: ["https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&h=600&q=80"],
-        likesCount: 54,
-        isLiked: false,
-        commentsCount: 12,
-        createdAt: "2 hours ago",
-      },
-    ])
+  /** Get Clan Posts (GET /clan/<clan_name>/posts/) */
+  async getClanPosts(clanName: number | string): Promise<ClanPostItem[]> {
+    return djangoFetch<ClanPostItem[]>(
+      `/clan/${encodeURIComponent(String(clanName))}/posts/`,
+      { method: "GET" },
+      () => [
+        {
+          id: "post-1",
+          clanId: 1,
+          clanName: String(clanName),
+          authorId: 1,
+          authorName: "Aarav Khanna",
+          authorRole: "Leader",
+          content: "Released Campus Clans Glassmorphic UI Kit v2 with React 19 and Tailwind CSS v4!",
+          images: ["https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&h=600&q=80"],
+          likesCount: 54,
+          isLiked: false,
+          commentsCount: 12,
+          createdAt: "2 hours ago",
+        },
+      ]
+    )
   },
 
-  /** Create Clan Post (POST /clan/<clan_id>/post/create/submit/) */
-  async createPost(clanId: number | string, formData: FormData): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan/${clanId}/post/create/submit/`, { method: "POST", body: formData }, () => ({
-      success: true,
-    }))
+  /** Create Clan Post (POST /clan/<name>/post/create/) */
+  async createPost(
+    clanName: string,
+    data: FormData | { content: string; image?: string; isAnnouncement?: boolean; tags?: string[] }
+  ): Promise<{ success: boolean; message?: string }> {
+    const isFormData = data instanceof FormData
+    const body = isFormData
+      ? data
+      : (() => {
+          const fd = new FormData()
+          fd.append("content", data.content)
+          if (data.image) fd.append("image", data.image)
+          if (data.isAnnouncement) fd.append("is_announcement", "true")
+          if (data.tags) fd.append("tags", JSON.stringify(data.tags))
+          return fd
+        })()
+
+    return djangoFetch(
+      `/clan/${encodeURIComponent(clanName)}/post/create/`,
+      { method: "POST", body },
+      () => ({
+        success: true,
+        message: `Clan post published to ${clanName} feed (/clan/${clanName}/post/create/)!`,
+      })
+    )
   },
 
-  /** Toggle post like (POST /clan/post/<post_id>/like/) */
-  async toggleLike(postId: number | string): Promise<{ success: boolean; liked: boolean; like_count: number }> {
-    return djangoFetch(`/clan/post/${postId}/like/`, { method: "POST" }, () => ({
+  /** Like / Unlike post (POST /post/<id>/like/) */
+  async toggleLike(
+    postId: number | string
+  ): Promise<{ success: boolean; liked: boolean; like_count: number }> {
+    return djangoFetch(`/post/${postId}/like/`, { method: "POST" }, () => ({
       success: true,
       liked: true,
       like_count: 55,
     }))
   },
 
-  /** Get post likes list (GET /clan-post/<post_id>/likes/) */
+  /** Get post likers list (GET /post/<id>/likes/) */
   async getLikes(postId: number | string): Promise<any[]> {
-    return djangoFetch(`/clan-post/${postId}/likes/`, { method: "GET" }, () => [
-      { id: 1, name: "Aarav Khanna" },
-      { id: 2, name: "Riya Malhotra" },
+    return djangoFetch(`/post/${postId}/likes/`, { method: "GET" }, () => [
+      { id: "stu-1", name: "Aarav Khanna", avatar: "AK", branch: "B.Tech CSE · 3rd Year", likedAt: "5m ago" },
+      { id: "stu-2", name: "Riya Malhotra", avatar: "RM", branch: "B.Tech IT · 3rd Year", likedAt: "12m ago" },
+      { id: "stu-3", name: "Devansh Sharma", avatar: "DS", branch: "B.Tech CSE · 3rd Year", likedAt: "30m ago" },
+      { id: "stu-4", name: "Simran Kaur", avatar: "SK", branch: "B.Tech AI · 2nd Year", likedAt: "1h ago" },
+      { id: "stu-5", name: "Kabir Singh", avatar: "KS", branch: "B.Tech ECE · 4th Year", likedAt: "2h ago" },
     ])
   },
 
-  /** Delete clan post (POST /clan-post/<post_id>/delete) */
-  async deletePost(postId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan-post/${postId}/delete`, { method: "POST" }, () => ({ success: true }))
+  /** Delete clan post by Leader or Author (POST /post/<id>/delete/) */
+  async deletePost(postId: number | string): Promise<{ success: boolean; message?: string }> {
+    return djangoFetch(`/post/${postId}/delete/`, { method: "POST" }, () => ({
+      success: true,
+      message: `Clan post #${postId} deleted successfully (/post/${postId}/delete/).`,
+    }))
   },
 }
 
 // ==========================================
-// 6. PROJECTS SERVICE (Personal & Clan)
+// ==========================================
+// 6. PROJECTS SERVICE (Personal & Clan Engine)
 // ==========================================
 export const DjangoProjects = {
-  /** Create Personal Student Project (POST /project/create/) */
-  async createPersonalProject(data: FormData | any): Promise<{ success: boolean; project_id?: number }> {
+  /** Create Personal Student Project (POST /project/personal/create/) */
+  async createPersonalProject(data: FormData | any): Promise<{ success: boolean; project_id?: number; message?: string }> {
     const body = data instanceof FormData ? data : JSON.stringify(data)
-    return djangoFetch("/project/create/", { method: "POST", body }, () => ({ success: true, project_id: Date.now() }))
+    return djangoFetch(
+      "/project/personal/create/",
+      { method: "POST", body },
+      () => ({
+        success: true,
+        project_id: Date.now(),
+        message: "Personal project created successfully (/project/personal/create/)!",
+      })
+    )
   },
 
-  /** Add Milestone Update to Student Project (POST /project/<project_id>/update/create/) */
+  /** Create Clan Collaborative Project (POST /clan/<name>/project/create/) */
+  async createClanProject(
+    clanName: string | number,
+    data: FormData | any
+  ): Promise<{ success: boolean; project_id?: number; message?: string }> {
+    const body = data instanceof FormData ? data : JSON.stringify(data)
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanName))}/project/create/`,
+      { method: "POST", body },
+      () => ({
+        success: true,
+        project_id: Date.now(),
+        message: `Clan collaborative project registered for ${clanName} (/clan/${clanName}/project/create/)!`,
+      })
+    )
+  },
+
+  /** Add Milestone Update to Project Timeline (POST /project/<id>/update/ or POST /update/) */
+  async addMilestoneUpdate(
+    projectId: number | string,
+    data: { title: string; content: string; phase?: string }
+  ): Promise<{ success: boolean; message?: string }> {
+    const formData = new FormData()
+    formData.append("title", data.title || "")
+    formData.append("content", data.content || "")
+    if (data.phase) formData.append("phase", data.phase)
+
+    return djangoFetch(
+      `/project/${projectId}/update/`,
+      { method: "POST", body: formData },
+      () => ({
+        success: true,
+        message: `Development milestone update logged for project #${projectId} (/update/)!`,
+      })
+    )
+  },
+
+  /** Alias for backward compatibility */
   async addPersonalProjectUpdate(projectId: number | string, data: any): Promise<{ success: boolean }> {
-    const formData = new FormData()
-    formData.append("title", data.title || "")
-    formData.append("content", data.content || "")
-    return djangoFetch(`/project/${projectId}/update/create/`, { method: "POST", body: formData }, () => ({
-      success: true,
-    }))
+    return this.addMilestoneUpdate(projectId, data)
   },
 
-  /** Complete Student Project (POST /project/<project_id>/complete/) */
-  async completePersonalProject(projectId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/project/${projectId}/complete/`, { method: "POST" }, () => ({ success: true }))
-  },
-
-  /** Create Clan Project (POST /clan/<clan_id>/project/create/) */
-  async createClanProject(clanId: number | string, data: FormData | any): Promise<{ success: boolean }> {
-    const body = data instanceof FormData ? data : JSON.stringify(data)
-    return djangoFetch(`/clan/${clanId}/project/create/`, { method: "POST", body }, () => ({ success: true }))
-  },
-
-  /** Add Update to Clan Project (POST /clan-project/<project_id>/update/create/) */
+  /** Alias for backward compatibility */
   async addClanProjectUpdate(projectId: number | string, data: any): Promise<{ success: boolean }> {
-    const formData = new FormData()
-    formData.append("title", data.title || "")
-    formData.append("content", data.content || "")
-    return djangoFetch(`/clan-project/${projectId}/update/create/`, { method: "POST", body: formData }, () => ({
-      success: true,
-    }))
+    return this.addMilestoneUpdate(projectId, data)
   },
 
-  /** Complete Clan Project (POST /clan-project/<project_id>/complete/) */
+  /** Mark Project as Completed (POST /project/<id>/complete/ or POST /complete/) */
+  async completeProject(
+    projectId: number | string,
+    status: "completed" | "in_progress" = "completed"
+  ): Promise<{ success: boolean; status: string; message?: string }> {
+    const formData = new FormData()
+    formData.append("status", status)
+
+    return djangoFetch(
+      `/project/${projectId}/complete/`,
+      { method: "POST", body: formData },
+      () => ({
+        success: true,
+        status,
+        message: `Project #${projectId} completion status updated to '${status}' (/complete/)!`,
+      })
+    )
+  },
+
+  /** Alias for backward compatibility */
+  async completePersonalProject(projectId: number | string): Promise<{ success: boolean }> {
+    return this.completeProject(projectId, "completed")
+  },
+
+  /** Alias for backward compatibility */
   async completeClanProject(projectId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/clan-project/${projectId}/complete/`, { method: "POST" }, () => ({ success: true }))
+    return this.completeProject(projectId, "completed")
+  },
+
+  /** Delete Personal Student Project (POST /project/<project_id>/delete/) */
+  async deletePersonalProject(projectId: number | string): Promise<{ success: boolean }> {
+    return djangoFetch(`/project/${projectId}/delete/`, { method: "POST" }, () => ({ success: true }))
   },
 }
 
@@ -558,21 +749,35 @@ export const DjangoRecruitments = {
     ])
   },
 
-  /** Create Clan Recruitment opening (POST /clan/<clan_id>/recruitment/create/) */
-  async createClanRecruitment(clanId: number | string, data: any): Promise<{ success: boolean }> {
+  /** Create Clan Recruitment opening (POST /clan/<name>/recruitment/create/) */
+  async createClanRecruitment(clanName: number | string, data: any): Promise<{ success: boolean; message?: string }> {
     const formData = new FormData()
     formData.append("title", data.title || "")
     formData.append("description", data.description || "")
-    return djangoFetch(`/clan/${clanId}/recruitment/create/`, { method: "POST", body: formData }, () => ({
-      success: true,
-    }))
+    if (data.skills) formData.append("skills", Array.isArray(data.skills) ? data.skills.join(",") : data.skills)
+    return djangoFetch(
+      `/clan/${encodeURIComponent(String(clanName))}/recruitment/create/`,
+      { method: "POST", body: formData },
+      () => ({
+        success: true,
+        message: `Open position posted for ${clanName} (/clan/${clanName}/recruitment/create/)!`,
+      })
+    )
   },
 
-  /** Apply to a Global Clan Recruitment (POST /global-recruitments/<recruitment_id>/request/) */
-  async applyToRecruitment(recruitmentId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/global-recruitments/${recruitmentId}/request/`, { method: "POST" }, () => ({
-      success: true,
-    }))
+  /** Apply to a Clan Recruitment vacancy (POST /recruitment/<id>/apply/) */
+  async applyToRecruitment(recruitmentId: number | string, data?: any): Promise<{ success: boolean; message?: string }> {
+    const formData = new FormData()
+    if (data?.pitch) formData.append("pitch", data.pitch)
+    if (data?.skills) formData.append("skills", Array.isArray(data.skills) ? data.skills.join(",") : data.skills)
+    return djangoFetch(
+      `/recruitment/${recruitmentId}/apply/`,
+      { method: "POST", body: formData },
+      () => ({
+        success: true,
+        message: `Application submitted to clan leadership (/recruitment/${recruitmentId}/apply/)!`,
+      })
+    )
   },
 
   /** Get Student Availability Seekings (GET /student-recruitments/) */
@@ -586,19 +791,27 @@ export const DjangoRecruitments = {
         branch: "B.Tech CSE",
         year: "3rd Year",
         skills: ["React 19", "Tailwind CSS", "UI/UX", "TypeScript"],
-        bio: "Looking to collaborate on competitive national hackathon teams.",
+        bio: "Looking to collaborate on competitive national hackathon teams. Specializing in realtime canvas & web architectures.",
         createdAt: "1 day ago",
       },
     ])
   },
 
-  /** Create Student Availability Post (POST /student-recruitment/create/) */
-  async createStudentRecruitment(data: any): Promise<{ success: boolean }> {
+  /** Student 'Looking for Clan' Availability Post (POST /student/recruitment/create/) */
+  async createStudentRecruitment(data: any): Promise<{ success: boolean; message?: string }> {
     const formData = new FormData()
     formData.append("bio", data.bio || "")
-    return djangoFetch("/student-recruitment/create/", { method: "POST", body: formData }, () => ({
-      success: true,
-    }))
+    if (data.role) formData.append("role", data.role)
+    if (data.hoursPerWeek) formData.append("hours_per_week", data.hoursPerWeek)
+    if (data.skills) formData.append("skills", Array.isArray(data.skills) ? data.skills.join(",") : data.skills)
+    return djangoFetch(
+      "/student/recruitment/create/",
+      { method: "POST", body: formData },
+      () => ({
+        success: true,
+        message: "Your 'Looking for Clan' availability profile is now live across campus (/student/recruitment/create/)!",
+      })
+    )
   },
 }
 
@@ -612,46 +825,51 @@ export const DjangoEvents = {
   },
 
   /**
-   * Participate in Event (POST /event/<event_id>/participate/<type>/)
-   * type: 'student' (individual) or 'clan'
+   * Dual Participation Modes (POST /event/<id>/participate/<type>/)
+   * type: 'student' (Individual Student Entry) or 'clan' (Clan Team Entry)
    */
   async participate(eventId: number | string, participationType: "student" | "clan"): Promise<{ success: boolean; message?: string }> {
     return djangoFetch(`/event/${eventId}/participate/${participationType}/`, { method: "POST" }, () => ({
       success: true,
-      message: `Registered for event as ${participationType === "clan" ? "Clan Team" : "Individual"}.`,
+      message: `Registered for event as ${participationType === "clan" ? "Clan Team" : "Individual Student"}.`,
     }))
   },
 
-  /** Cancel event participation (POST /event/<event_id>/cancel/) */
+  /** RSVP Cancel / Withdraw Participation (POST /event/<id>/cancel-participation/) */
   async cancelParticipation(eventId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/event/${eventId}/cancel/`, { method: "POST" }, () => ({ success: true }))
+    return djangoFetch(`/event/${eventId}/cancel-participation/`, { method: "POST" }, () => ({ success: true }))
   },
 
   /** Fetch clan members selected to represent clan in event (GET /event/<event_id>/clan-members/) */
   async getEventClanMembers(eventId: number | string): Promise<any[]> {
     return djangoFetch(`/event/${eventId}/clan-members/`, { method: "GET" }, () => [
-      { id: 1, name: "Aarav Khanna", role: "Leader" },
-      { id: 2, name: "Riya Malhotra", role: "Co-Leader" },
+      { id: "stu-1", name: "Aarav Khanna", role: "Leader", branch: "B.Tech CSE · Year 3" },
+      { id: "stu-2", name: "Riya Malhotra", role: "Co-Leader", branch: "B.Des · Year 2" },
+      { id: "stu-3", name: "Devansh Sharma", role: "Core Member", branch: "B.Tech CSE · Year 3" },
+      { id: "stu-4", name: "Tanya Sen", role: "Member", branch: "B.Des · Year 2" },
     ])
   },
 
-  /** Save selected clan representatives (POST /event/<event_id>/clan-members/save/) */
+  /** Save selected clan representatives (POST /clan-members/save/ or /event/<event_id>/clan-members/save/) */
   async saveEventClanMembers(eventId: number | string, memberIds: (number | string)[]): Promise<{ success: boolean }> {
     const formData = new FormData()
     memberIds.forEach((id) => formData.append("member_ids", String(id)))
-    return djangoFetch(`/event/${eventId}/clan-members/save/`, { method: "POST", body: formData }, () => ({
-      success: true,
-    }))
+    return djangoFetch(`/clan-members/save/`, { method: "POST", body: formData }, async () => {
+      // Secondary fallback to event-specific route
+      return djangoFetch(`/event/${eventId}/clan-members/save/`, { method: "POST", body: formData }, () => ({
+        success: true,
+      }))
+    })
   },
 }
 
 // ==========================================
-// 9. CAMPUS ADMIN CONSOLE SERVICE
+// 9. CAMPUS ADMIN CONSOLE SERVICE (campus_admin)
 // ==========================================
 export const DjangoAdmin = {
-  /** Fetch Admin Dashboard Statistics (GET /campus-admin/) */
+  /** Admin Dashboard (GET /campus-admin/dashboard/ or /campus-admin/) */
   async getDashboard(): Promise<any> {
-    return djangoFetch("/campus-admin/", { method: "GET" }, () => ({
+    return djangoFetch("/campus-admin/dashboard/", { method: "GET" }, () => ({
       totalStudents: INITIAL_STUDENTS.length,
       totalClans: INITIAL_CLANS.length,
       activeEvents: INITIAL_EVENTS.length,
@@ -659,46 +877,52 @@ export const DjangoAdmin = {
     }))
   },
 
-  /** Student Suspension (POST /campus-admin/students/<id>/suspend/) */
-  async suspendStudent(studentId: number | string, reason: string): Promise<{ success: boolean }> {
+  /** Student Suspension (POST /campus-admin/student/<id>/suspend/) */
+  async suspendStudent(studentId: number | string, reason: string, durationDays = 14): Promise<{ success: boolean }> {
     const formData = new FormData()
     formData.append("reason", reason)
-    return djangoFetch(`/campus-admin/students/${studentId}/suspend/`, { method: "POST", body: formData }, () => ({
+    formData.append("duration_days", String(durationDays))
+    return djangoFetch(`/campus-admin/student/${studentId}/suspend/`, { method: "POST", body: formData }, () => ({
       success: true,
     }))
   },
 
-  /** Unsuspend Student (POST /campus-admin/students/<id>/unsuspend/) */
+  /** Student Reinstatement / Unsuspend (POST /campus-admin/student/<id>/unsuspend/) */
   async unsuspendStudent(studentId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/campus-admin/students/${studentId}/unsuspend/`, { method: "POST" }, () => ({ success: true }))
+    return djangoFetch(`/campus-admin/student/${studentId}/unsuspend/`, { method: "POST" }, () => ({ success: true }))
   },
 
-  /** Clan Suspension (POST /campus-admin/clans/<id>/suspend/) */
-  async suspendClan(clanId: number | string, reason: string): Promise<{ success: boolean }> {
+  /** Clan Suspension (POST /campus-admin/clan/<id>/suspend/) */
+  async suspendClan(clanId: number | string, reason: string, durationDays = 14): Promise<{ success: boolean }> {
     const formData = new FormData()
     formData.append("reason", reason)
-    return djangoFetch(`/campus-admin/clans/${clanId}/suspend/`, { method: "POST", body: formData }, () => ({
+    formData.append("duration_days", String(durationDays))
+    return djangoFetch(`/campus-admin/clan/${clanId}/suspend/`, { method: "POST", body: formData }, () => ({
       success: true,
     }))
   },
 
-  /** Unsuspend Clan (POST /campus-admin/clans/<id>/unsuspend/) */
+  /** Clan Reinstatement / Unsuspend (POST /campus-admin/clan/<id>/unsuspend/) */
   async unsuspendClan(clanId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/campus-admin/clans/${clanId}/unsuspend/`, { method: "POST" }, () => ({ success: true }))
+    return djangoFetch(`/campus-admin/clan/${clanId}/unsuspend/`, { method: "POST" }, () => ({ success: true }))
   },
 
-  /** Allocate Trophy to Student or Clan (POST /campus-admin/events/<id>/trophies/) */
-  async allocateTrophy(eventId: number | string, data: any): Promise<{ success: boolean }> {
+  /** Trophy & Award Allocation (POST /campus-admin/clan/<id>/trophy/allocate/) */
+  async allocateTrophy(clanId: number | string, data: any): Promise<{ success: boolean; trophy?: any }> {
     const formData = new FormData()
     Object.entries(data).forEach(([k, v]) => formData.append(k, String(v)))
-    return djangoFetch(`/campus-admin/events/${eventId}/trophies/`, { method: "POST", body: formData }, () => ({
+    return djangoFetch(`/campus-admin/clan/${clanId}/trophy/allocate/`, { method: "POST", body: formData }, () => ({
       success: true,
+      trophy: data,
     }))
   },
 
-  /** Delete Trophy (POST /campus-admin/events/<id>/trophies/<trophy_id>/delete/) */
-  async deleteTrophy(eventId: number | string, trophyId: number | string): Promise<{ success: boolean }> {
-    return djangoFetch(`/campus-admin/events/${eventId}/trophies/${trophyId}/delete/`, { method: "POST" }, () => ({
+  /** Trophy Delete / Revocation (POST /campus-admin/clan/<clanId>/trophy/<id>/delete/ or /trophy/<id>/delete/) */
+  async deleteTrophy(trophyId: number | string, clanId?: number | string): Promise<{ success: boolean }> {
+    const endpoint = clanId
+      ? `/campus-admin/clan/${clanId}/trophy/${trophyId}/delete/`
+      : `/trophy/${trophyId}/delete/`
+    return djangoFetch(endpoint, { method: "POST" }, () => ({
       success: true,
     }))
   },
@@ -707,16 +931,16 @@ export const DjangoAdmin = {
   async sendMessage(targetType: "student" | "clan", id: number | string, message: string): Promise<{ success: boolean }> {
     const endpoint =
       targetType === "student"
-        ? `/campus-admin/students/${id}/message/`
-        : `/campus-admin/clans/${id}/message/`
+        ? `/campus-admin/student/${id}/message/`
+        : `/campus-admin/clan/${id}/message/`
     const formData = new FormData()
     formData.append("message", message)
     return djangoFetch(endpoint, { method: "POST", body: formData }, () => ({ success: true }))
   },
 
-  /** Download institutional monthly reports (PDF, CSV, Excel, JSON) */
+  /** Institutional Audit Reports Export (/campus-admin/reports/export/<format>/) */
   getReportDownloadUrl(format: "pdf" | "csv" | "xlsx" | "json"): string {
-    return `${DJANGO_URL}/campus-admin/reports/monthly.${format}`
+    return `${DJANGO_URL}/campus-admin/reports/export/${format}/`
   },
 }
 

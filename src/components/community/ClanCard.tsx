@@ -9,6 +9,7 @@ export interface ClanCardData {
   status: "Active" | "Suspended" | "Ended"
   initials: string
   leaderName?: string
+  coLeaderName?: string
   tierBadge?: string
   xp?: string
   trophies?: number
@@ -51,10 +52,11 @@ export default function ClanCard({
           accentGlow: "rgba(56, 189, 248, 0.25)",
           stat1Label: "PROJECTS BUILT",
           stat1Val: `${clan.projects} Projects`,
-          stat2Label: "ACTIVE SPRINT",
-          stat2Val: "96% Velocity",
+          stat2Label: "CO-LEADER",
+          stat2Val: clan.coLeaderName || "Riya Malhotra",
           statusColor: "text-emerald-400",
           leader: clan.leaderName || "Aarav Khanna",
+          coLeader: clan.coLeaderName || "Riya Malhotra",
           emblem: (
             <svg viewBox="0 0 100 100" className="w-28 h-28 drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]">
               <defs>
@@ -94,10 +96,11 @@ export default function ClanCard({
           accentGlow: "rgba(16, 185, 129, 0.25)",
           stat1Label: "AI MODELS BUILT",
           stat1Val: `${clan.projects} Systems`,
-          stat2Label: "WIN RATE",
-          stat2Val: "98% Top 3",
+          stat2Label: "CO-LEADER",
+          stat2Val: clan.coLeaderName || "Simran Kaur",
           statusColor: "text-emerald-400",
           leader: clan.leaderName || "Devansh Sharma",
+          coLeader: clan.coLeaderName || "Simran Kaur",
           emblem: (
             <svg viewBox="0 0 100 100" className="w-28 h-28 drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]">
               <defs>
@@ -131,10 +134,11 @@ export default function ClanCard({
           accentGlow: "rgba(168, 85, 247, 0.25)",
           stat1Label: "STARTUP DEMOS",
           stat1Val: `${clan.projects} Pitches`,
-          stat2Label: "ACCELERATION",
-          stat2Val: "Seed Ready",
+          stat2Label: "CO-LEADER",
+          stat2Val: clan.coLeaderName || "Siddharth Roy",
           statusColor: "text-amber-400",
           leader: clan.leaderName || "Naina Kapoor",
+          coLeader: clan.coLeaderName || "Siddharth Roy",
           emblem: (
             <svg viewBox="0 0 100 100" className="w-28 h-28 drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]">
               <defs>
@@ -168,10 +172,11 @@ export default function ClanCard({
           accentGlow: "rgba(14, 165, 233, 0.25)",
           stat1Label: "ROBOTS & IOT",
           stat1Val: `${clan.projects} Builds`,
-          stat2Label: "LAB BENCH",
-          stat2Val: "Full Access",
+          stat2Label: "CO-LEADER",
+          stat2Val: clan.coLeaderName || "Priya Das",
           statusColor: "text-sky-400",
           leader: clan.leaderName || "Kabir Singh",
+          coLeader: clan.coLeaderName || "Priya Das",
           emblem: (
             <svg viewBox="0 0 100 100" className="w-28 h-28 drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]">
               <defs>
@@ -252,7 +257,7 @@ export default function ClanCard({
 
         {/* 
           2. CLAN INFO SECTION
-          High-contrast, bold, crisp white typography + Current Running Projects
+          High-contrast, bold, crisp white typography + Leader & Co-Leader & Projects
         */}
         <div className="space-y-2.5 px-1">
           {/* Clan Title & Status */}
@@ -271,12 +276,28 @@ export default function ClanCard({
             </span>
           </div>
 
-          {/* Current Running Projects Count */}
-          <div className="flex items-center gap-2">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#151c28] border border-white/10 text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]" />
+          {/* Leadership: Leader & Co-Leader */}
+          <div className="flex items-center justify-between text-xs py-1 border-t border-b border-white/10">
+            <span className="text-slate-400 font-medium text-[11px] flex items-center gap-1">
+              <span>👑</span>
+              <strong className="text-slate-200 font-bold">{theme.leader}</strong>
+            </span>
+            <span className="text-purple-300 font-medium text-[11px] flex items-center gap-1">
+              <span>⭐</span>
+              <strong className="text-purple-200 font-bold">{theme.coLeader}</strong>
+            </span>
+          </div>
+
+          {/* Current Running Projects & Co-Leader Pill */}
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#151c28] border border-white/10 text-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <strong className="text-white font-extrabold">{clan.projects}</strong>
-              <span className="text-slate-400 font-bold text-[11px] uppercase tracking-wider">Running Projects</span>
+              <span className="text-slate-400 font-bold text-[10px] uppercase">Projects</span>
+            </div>
+            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-500/10 border border-purple-500/30 text-xs text-purple-300">
+              <span className="text-[10px] text-purple-400 font-black">Co-Lead:</span>
+              <span className="font-bold text-[11px] text-white truncate max-w-[90px]">{theme.coLeader}</span>
             </div>
           </div>
         </div>
