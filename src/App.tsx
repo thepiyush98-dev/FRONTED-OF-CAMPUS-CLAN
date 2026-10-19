@@ -821,7 +821,7 @@ function LoginModal({
   // Handle Send Registration OTP (/send-otp/)
   async function handleSendOtp() {
     if (!regEmail.trim() || !regEmail.includes("@")) {
-      setRegError("Please enter a valid college email address first.")
+      setRegError("Please enter a valid email address first.")
       return
     }
     setOtpSending(true)
@@ -833,7 +833,7 @@ function LoginModal({
         setOtpSent(true)
         setRegStatusMsg(res.message || `OTP sent to ${regEmail}. (Demo OTP: 123456)`)
       } else {
-        setRegError(res.error || "Failed to send OTP to college email.")
+        setRegError(res.error || "Failed to send OTP to email.")
       }
     } catch (e: any) {
       setRegError(e.message || "Could not connect to authentication service.")
@@ -854,7 +854,7 @@ function LoginModal({
       const res = await verifyOtp(regEmail.trim(), regOtp.trim())
       if (res.success) {
         setOtpVerified(true)
-        setRegStatusMsg("✓ College email verified successfully! Now complete your credentials.")
+        setRegStatusMsg("✓ Email verified successfully! Now complete your credentials.")
       } else {
         setRegError(res.error || "Invalid or expired OTP. Use demo OTP: 123456")
       }
@@ -869,7 +869,7 @@ function LoginModal({
   async function submitRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!otpVerified) {
-      setRegError("Please verify your college email address with OTP first.")
+      setRegError("Please verify your email address with OTP first.")
       return
     }
     if (!regName.trim() || !regUsername.trim() || !regPassword) {
@@ -917,7 +917,7 @@ function LoginModal({
   // Handle Send Password Reset OTP (/send-password-reset-otp/)
   async function handleForgotSendOtp() {
     if (!forgotEmail.trim() || !forgotEmail.includes("@")) {
-      setForgotError("Please enter your registered college email.")
+      setForgotError("Please enter your registered email.")
       return
     }
     setForgotSending(true)
@@ -1037,7 +1037,7 @@ function LoginModal({
                   Sign In
                 </h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Welcome back! Enter your campus username or college email.
+                  Welcome back! Enter your username or email.
                 </p>
               </div>
 
@@ -1051,7 +1051,7 @@ function LoginModal({
                 {/* Email / Username */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-800 block">
-                    Campus Username or Email
+                    Username or Email
                   </label>
                   <input
                     value={loginEmail}
@@ -1059,7 +1059,7 @@ function LoginModal({
                       setLoginEmail(e.target.value)
                       setLoginError("")
                     }}
-                    placeholder="e.g. aaravk or student@campus.edu"
+                    placeholder="e.g. aaravk or user@gmail.com"
                     className="w-full p-3 rounded-xl border border-slate-200 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none transition-all placeholder:text-slate-400 font-medium"
                     autoFocus
                     required
@@ -1151,7 +1151,7 @@ function LoginModal({
                   Student Registration
                 </h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Verify your college email with OTP & set your campus credentials.
+                  Verify your email with OTP & set your campus credentials.
                 </p>
               </div>
 
@@ -1167,11 +1167,11 @@ function LoginModal({
                   </div>
                 )}
 
-                {/* College Email OTP Verification Row */}
+                {/* Email OTP Verification Row */}
                 <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-black text-amber-950 uppercase tracking-wider block">
-                      College Email Verification
+                      Email Verification (OTP)
                     </label>
                     {otpVerified && (
                       <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center gap-1">
@@ -1189,7 +1189,7 @@ function LoginModal({
                         setOtpSent(false)
                         setOtpVerified(false)
                       }}
-                      placeholder="your.name@campus.edu"
+                      placeholder="your.email@gmail.com"
                       disabled={otpVerified}
                       className="flex-1 text-xs p-2 rounded-xl border border-slate-200 bg-white"
                       required
@@ -1345,7 +1345,7 @@ function LoginModal({
                   Reset Password
                 </h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Enter your registered college email to verify OTP and set a new password.
+                  Enter your registered email to verify OTP and set a new password.
                 </p>
               </div>
 
@@ -1363,13 +1363,13 @@ function LoginModal({
 
                 {/* Step 1: Registered Email Input */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-800 block">Registered College Email</label>
+                  <label className="text-xs font-bold text-slate-800 block">Registered Email</label>
                   <div className="flex gap-2">
                     <input
                       type="email"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="student@campus.edu"
+                      placeholder="your.email@gmail.com"
                       disabled={forgotOtpVerified}
                       className="flex-1 text-xs p-2.5 rounded-xl border border-slate-200"
                       required
