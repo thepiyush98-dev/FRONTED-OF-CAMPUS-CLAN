@@ -2301,9 +2301,62 @@ function StudentClans({
   const [requested, setRequested] = useState<string[]>([])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [joinFeedback, setJoinFeedback] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState<"clans" | "recruits">("clans")
 
-  const visible = clanList.filter((clan) =>
+  // Backend StudentRecruitment model: Students who posted availability for clan scouting
+  const [recruits, setRecruits] = useState([
+    {
+      id: "rec-1",
+      name: "Vikram Mehta",
+      department: "School of Design",
+      branch: "B.Des · 3rd Year",
+      initials: "VM",
+      preferredRole: "UI/UX & Design Systems Lead",
+      skills: ["Figma", "Design Systems", "Prototyping", "User Research"],
+      bio: "Looking to join a hackathon clan that needs a dedicated product and interface designer. Top 10 at Figma Design Jam 2025.",
+      invited: false,
+    },
+    {
+      id: "rec-2",
+      name: "Ananya Roy",
+      department: "Dept of Computer Science",
+      branch: "B.Tech CSE · 3rd Year",
+      initials: "AR",
+      preferredRole: "Frontend Architecture & React Specialist",
+      skills: ["React 19", "Tailwind CSS", "TypeScript", "Next.js"],
+      bio: "Full-stack developer with intense focus on React performance and Web3 interfaces. Aiming for National Hackfest 2026.",
+      invited: false,
+    },
+    {
+      id: "rec-3",
+      name: "Devansh Sharma",
+      department: "Dept of Computer Science",
+      branch: "B.Tech CSE · 3rd Year",
+      initials: "DS",
+      preferredRole: "AI / ML & PyTorch Engineer",
+      skills: ["Python", "PyTorch", "FastAPI", "Vector DB", "Docker"],
+      bio: "Authored two campus papers on local LLM quantization. Looking for a clan building deep learning products.",
+      invited: false,
+    },
+    {
+      id: "rec-4",
+      name: "Rohit Verma",
+      department: "Electronics & Communication",
+      branch: "B.Tech ECE · 4th Year",
+      initials: "RV",
+      preferredRole: "Embedded Systems & Hardware Telemetry",
+      skills: ["C++", "RTOS", "ESP32", "ROS2", "IoT"],
+      bio: "Autonomous rover pilot. Can interface microcontrollers with web telemetry dashboards.",
+      invited: false,
+    },
+  ])
+
+  const visibleClans = clanList.filter((clan) =>
     `${clan.name} ${clan.focus}`.toLowerCase().includes(query.toLowerCase()),
+  )
+
+  const visibleRecruits = recruits.filter((r) =>
+    `${r.name} ${r.preferredRole} ${r.skills.join(" ")}`.toLowerCase().includes(query.toLowerCase()),
   )
 
   const handleToggleJoinClan = async (clanName: string) => {
@@ -2336,6 +2389,15 @@ function StudentClans({
     onOpenClan?.(newClan.name)
   }
 
+  const handleInviteRecruit = (recruitId: string, name: string) => {
+    djangoApi.clans.sendInvitation(Date.now()).catch(() => {})
+    setRecruits((prev) =>
+      prev.map((r) => (r.id === recruitId ? { ...r, invited: true } : r))
+    )
+    setJoinFeedback(`Official clan invitation dispatched to ${name}!`)
+    setTimeout(() => setJoinFeedback(null), 4000)
+  }
+
   return (
     <div className="student-page space-y-6">
       {/* Join Request / Action Notification Banner */}
@@ -2358,13 +2420,15 @@ function StudentClans({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4">
         <div>
           <span className="text-[11px] font-black uppercase tracking-widest text-amber-600 block mb-1">
-            Skill-Based Discovery
+            Skill-Based Discovery & Scouting
           </span>
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight font-heading">
-            Find your clan.
+            {activeSection === "clans" ? "Find your clan." : "Scout student talent."}
           </h1>
           <p className="text-xs md:text-sm text-slate-600 font-medium mt-1">
-            Meet ambitious students who are serious about building, competing, and growing together.
+            {activeSection === "clans"
+              ? "Meet ambitious students who are serious about building, competing, and growing together."
+              : "Browse students actively seeking clans for hackathons, engineering sprints, and competitions."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -2388,23 +2452,126 @@ function StudentClans({
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search clans or skills"
+              placeholder={activeSection === "clans" ? "Search clans or skills" : "Search candidate skills..."}
             />
           </label>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
-        {visible.map((clan) => (
-          <ClanCard
-            key={clan.name}
-            clan={clan as any}
-            isRequested={requested.includes(clan.name)}
-            onOpen={() => onOpenClan?.(clan.name)}
-            onJoin={() => handleToggleJoinClan(clan.name)}
-          />
-        ))}
+      {/* Segmented Control: Browse Clans vs Scout Recruits */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 rounded-2xl w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveSection("clans")}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            activeSection === "clans"
+              ? "bg-white text-slate-950 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          🛡️ Campus Clans ({clanList.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSection("recruits")}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSection === "recruits"
+              ? "bg-white text-slate-950 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <span>🎯 Scout Recruits</span>
+          <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-md text-[10px] font-black">
+            {recruits.length} Seeking
+          </span>
+        </button>
       </div>
+
+      {/* Section A: Clans Grid */}
+      {activeSection === "clans" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
+          {visibleClans.map((clan) => (
+            <ClanCard
+              key={clan.name}
+              clan={clan as any}
+              isRequested={requested.includes(clan.name)}
+              onOpen={() => onOpenClan?.(clan.name)}
+              onJoin={() => handleToggleJoinClan(clan.name)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Section B: Recruits Seeking Clan Directory (Backend StudentRecruitment feature) */}
+      {activeSection === "recruits" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 items-stretch">
+          {visibleRecruits.map((recruit) => (
+            <div
+              key={recruit.id}
+              className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-amber-400/60 transition-all space-y-3.5 flex flex-col justify-between"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-200 text-slate-950 font-black text-xs flex items-center justify-center shadow-xs">
+                      {recruit.initials}
+                    </div>
+                    <div>
+                      <strong className="text-sm font-black text-slate-900 block">{recruit.name}</strong>
+                      <span className="text-[11px] font-semibold text-slate-500">{recruit.branch}</span>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black uppercase">
+                    Looking for Clan
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">
+                    Preferred Role
+                  </span>
+                  <p className="text-xs font-black text-slate-900">{recruit.preferredRole}</p>
+                </div>
+
+                <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed italic">
+                  "{recruit.bio}"
+                </p>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Key Strengths</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recruit.skills.map((sk) => (
+                      <span key={sk} className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-700">
+                        {sk}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400">Available for sprints</span>
+                <button
+                  type="button"
+                  disabled={recruit.invited}
+                  onClick={() => handleInviteRecruit(recruit.id, recruit.name)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    recruit.invited
+                      ? "bg-emerald-100 text-emerald-900 cursor-not-allowed"
+                      : "bg-amber-400 hover:bg-amber-500 text-slate-950 shadow-xs"
+                  }`}
+                >
+                  {recruit.invited ? (
+                    <span>✓ Invitation Dispatched</span>
+                  ) : (
+                    <span>✉️ Invite to Clan</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Found a New Clan Modal */}
       <CreateClanModal

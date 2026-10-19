@@ -328,9 +328,102 @@ export default function ClanProfile({ clanName, onBack }: ClanProfileProps) {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteStudentName, setInviteStudentName] = useState("")
 
+  // Backend ClanJoinRequest: Pending student applications to join the clan
+  const [pendingJoinRequests, setPendingJoinRequests] = useState([
+    {
+      id: "req-1",
+      name: "Kabir Singh",
+      branch: "B.Tech ECE · 4th Year",
+      initials: "KS",
+      skills: ["Hardware Interfacing", "RTOS", "C++", "Drones"],
+      requestedAt: "2 hours ago",
+      pitch: "Excited to assist with microcontroller telemetry feeds in the upcoming hackathon!",
+    },
+    {
+      id: "req-2",
+      name: "Naina Kapoor",
+      branch: "BBA · 2nd Year",
+      initials: "NK",
+      skills: ["Product Strategy", "Figma", "Pitch Decks", "User Research"],
+      requestedAt: "Yesterday",
+      pitch: "I can lead product marketing, pitch deck presentation, and user testing sprints.",
+    },
+  ])
+
+  // Backend ClanRecruitmentApplication: Applicants for open vacancies
+  const [showApplicantsModal, setShowApplicantsModal] = useState<string | null>(null)
+  const [applicantsList, setApplicantsList] = useState<Record<string, Array<{ id: string; name: string; branch: string; skills: string[]; note: string; date: string }>>>({
+    "rec-1": [
+      { id: "app-1", name: "Ananya Roy", branch: "B.Tech CSE · 3rd Year", skills: ["React 19", "Tailwind CSS", "TypeScript"], note: "Built 3 production apps with React 19 and Framer Motion. Ready to sprint!", date: "Today" },
+      { id: "app-2", name: "Vikram Mehta", branch: "B.Des · 3rd Year", skills: ["Figma", "Design Systems", "Prototyping"], note: "Experienced with component architecture and UI design systems.", date: "Yesterday" }
+    ],
+    "rec-2": [
+      { id: "app-3", name: "Devansh Sharma", branch: "B.Tech CSE · 3rd Year", skills: ["PyTorch", "FastAPI", "Vector DB"], note: "Authored 2 campus AI research projects and deployed RAG search.", date: "2 days ago" }
+    ]
+  })
+
   function showToast(msg: string) {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(null), 3500)
+  }
+
+  const handleAcceptJoinRequest = (reqId: string) => {
+    const req = pendingJoinRequests.find((r) => r.id === reqId)
+    if (!req) return
+    const newMember: ClanMember = {
+      id: `stu-${Date.now()}`,
+      name: req.name,
+      role: "Member",
+      branch: req.branch.split(" · ")[0] || "B.Tech",
+      year: req.branch.split(" · ")[1] || "Year 2",
+      initials: req.initials,
+      skills: req.skills,
+    }
+    setClan((prev) => ({
+      ...prev,
+      memberCount: prev.memberCount + 1,
+      members: [...prev.members, newMember],
+    }))
+    setPendingJoinRequests((prev) => prev.filter((r) => r.id !== reqId))
+    showToast(`✓ Accepted ${req.name} into the clan! Added to roster.`)
+  }
+
+  const handleDeclineJoinRequest = (reqId: string) => {
+    setPendingJoinRequests((prev) => prev.filter((r) => r.id !== reqId))
+    showToast("Join request dismissed.")
+  }
+
+  const handleAcceptApplicant = (recId: string, appId: string) => {
+    const list = applicantsList[recId] || []
+    const applicant = list.find((a) => a.id === appId)
+    if (!applicant) return
+    const newMember: ClanMember = {
+      id: `stu-${Date.now()}`,
+      name: applicant.name,
+      role: "Member",
+      branch: applicant.branch.split(" · ")[0] || "B.Tech",
+      year: applicant.branch.split(" · ")[1] || "Year 2",
+      initials: applicant.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase(),
+      skills: applicant.skills,
+    }
+    setClan((prev) => ({
+      ...prev,
+      memberCount: prev.memberCount + 1,
+      members: [...prev.members, newMember],
+    }))
+    setApplicantsList((prev) => ({
+      ...prev,
+      [recId]: (prev[recId] || []).filter((a) => a.id !== appId),
+    }))
+    showToast(`✓ ${applicant.name} accepted into clan roster!`)
+  }
+
+  const handleRejectApplicant = (recId: string, appId: string) => {
+    setApplicantsList((prev) => ({
+      ...prev,
+      [recId]: (prev[recId] || []).filter((a) => a.id !== appId),
+    }))
+    showToast("Application rejected.")
   }
 
   // Handle Join Clan (POST /clan/<id>/join/)
@@ -1002,15 +1095,24 @@ export default function ClanProfile({ clanName, onBack }: ClanProfileProps) {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-emerald-700">● Accepting Applications</span>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyRecruitment(rec.id)}
-                    className="px-4 py-2 rounded-xl text-xs font-black bg-slate-900 hover:bg-slate-800 text-white transition-all cursor-pointer"
-                  >
-                    Apply to Clan →
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowApplicantsModal(rec.id)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-all cursor-pointer"
+                    >
+                      View Applicants ({applicantsList[rec.id]?.length ?? rec.applicantsCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyRecruitment(rec.id)}
+                      className="px-4 py-2 rounded-xl text-xs font-black bg-slate-900 hover:bg-slate-800 text-white transition-all cursor-pointer"
+                    >
+                      Apply to Clan →
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1025,6 +1127,75 @@ export default function ClanProfile({ clanName, onBack }: ClanProfileProps) {
       */}
       {activeTab === "roster" && (
         <section className="rounded-3xl bg-white border border-slate-200/90 shadow-xl p-6 sm:p-8 space-y-6 animate-fadeIn">
+          {/* Backend ClanJoinRequest: Pending Join Requests Inbox for Leadership */}
+          {pendingJoinRequests.length > 0 && (
+            <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-400/40 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                    Pending Join Requests ({pendingJoinRequests.length})
+                  </h3>
+                </div>
+                <span className="text-[11px] font-bold text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full">
+                  Clan Leader Review
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 font-medium">
+                Students who submitted a direct request to join your clan roster:
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {pendingJoinRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="p-4 rounded-xl bg-white border border-amber-300/80 shadow-xs space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-slate-900 text-amber-400 font-black text-xs flex items-center justify-center">
+                          {req.initials}
+                        </div>
+                        <div>
+                          <strong className="text-xs font-black text-slate-900 block">{req.name}</strong>
+                          <span className="text-[10px] text-slate-500 font-semibold">{req.branch} · {req.requestedAt}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {req.pitch && (
+                      <p className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg italic">
+                        "{req.pitch}"
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-1">
+                      {req.skills.map((sk) => (
+                        <span key={sk} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                          {sk}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDeclineJoinRequest(req.id)}
+                        className="px-3 py-1 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAcceptJoinRequest(req.id)}
+                        className="px-3 py-1 rounded-lg text-xs font-black bg-amber-400 hover:bg-amber-500 text-slate-950 shadow-xs cursor-pointer"
+                      >
+                        ✓ Accept into Clan
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
               <h2 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
@@ -1546,6 +1717,106 @@ export default function ClanProfile({ clanName, onBack }: ClanProfileProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 
+        ================================================================
+        MODAL 7: VIEW RECRUITMENT APPLICANTS MODAL (Backend Feature)
+        ================================================================
+      */}
+      {showApplicantsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full overflow-hidden max-h-[90vh] flex flex-col animate-scale-up">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <h3 className="text-base font-black text-slate-900">
+                    Candidate Applications
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Review student pitches for open role: <strong>{recruitments.find((r) => r.id === showApplicantsModal)?.title}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowApplicantsModal(null)}
+                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-700 cursor-pointer font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              {(applicantsList[showApplicantsModal] || []).length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-xs font-semibold">
+                  <span className="text-2xl block mb-2">📋</span>
+                  No pending candidate applications for this role yet.
+                </div>
+              ) : (
+                (applicantsList[showApplicantsModal] || []).map((app) => (
+                  <div
+                    key={app.id}
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <strong className="text-sm font-black text-slate-900 block">{app.name}</strong>
+                        <span className="text-[11px] text-slate-500 font-semibold">{app.branch} · Applied {app.date}</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-extrabold text-[10px]">
+                        Applicant
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-700 bg-white p-3 rounded-xl border border-slate-200/60 leading-relaxed italic">
+                      "{app.note}"
+                    </p>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Candidate Skills</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {app.skills.map((sk) => (
+                          <span key={sk} className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-800">
+                            {sk}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleRejectApplicant(showApplicantsModal, app.id)}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAcceptApplicant(showApplicantsModal, app.id)}
+                        className="px-4 py-1.5 rounded-xl text-xs font-black bg-amber-400 hover:bg-amber-500 text-slate-950 shadow-xs cursor-pointer"
+                      >
+                        ✓ Accept to Clan
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowApplicantsModal(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white cursor-pointer"
+              >
+                Done Reviewing
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -53,11 +53,24 @@ export default function EventDetailsModal({
   const [localInterested, setLocalInterested] = useState<boolean>(isInterested)
   const [copiedLink, setCopiedLink] = useState<string | null>(null)
   const [registeredSuccess, setRegisteredSuccess] = useState<boolean>(false)
+  const [registeredType, setRegisteredType] = useState<"student" | "clan" | null>(null)
+  const [showRosterModal, setShowRosterModal] = useState<boolean>(false)
+  const [selectedRoster, setSelectedRoster] = useState<string[]>(["stu-1", "stu-2"])
+  const [isSavingRoster, setIsSavingRoster] = useState<boolean>(false)
+
+  const clanMembersList = [
+    { id: "stu-1", name: "Aarav Khanna", role: "Leader", branch: "B.Tech CSE · Year 3" },
+    { id: "stu-2", name: "Riya Malhotra", role: "Co-Leader", branch: "B.Des · Year 2" },
+    { id: "stu-3", name: "Devansh Sharma", role: "Member", branch: "B.Tech CSE · Year 3" },
+    { id: "stu-4", name: "Tanya Sen", role: "Member", branch: "B.Des · Year 2" },
+  ]
 
   // Sync state when event or isInterested prop changes
   React.useEffect(() => {
     setLocalInterested(isInterested)
     setRegisteredSuccess(false)
+    setRegisteredType(null)
+    setShowRosterModal(false)
     setCopiedLink(null)
   }, [event, isInterested])
 
@@ -242,26 +255,117 @@ export default function EventDetailsModal({
                         try {
                           await djangoApi.events.participate(event.id, "student")
                         } catch {}
+                        setRegisteredType("student")
                         setRegisteredSuccess(true)
                       }}
-                      className="py-2 px-3 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                        registeredType === "student"
+                          ? "bg-emerald-500 text-slate-950 font-black shadow"
+                          : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
+                      }`}
                     >
                       <span>👤 Individual Student</span>
                     </button>
                     <button
                       type="button"
-                      onClick={async () => {
-                        try {
-                          await djangoApi.events.participate(event.id, "clan")
-                        } catch {}
-                        setRegisteredSuccess(true)
-                      }}
-                      className="py-2 px-3 rounded-xl font-bold text-xs bg-amber-400 hover:bg-amber-500 text-slate-950 flex items-center justify-center gap-1.5 cursor-pointer"
+                      onClick={() => setShowRosterModal(true)}
+                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                        registeredType === "clan"
+                          ? "bg-amber-400 text-slate-950 font-black shadow"
+                          : "bg-amber-400/90 hover:bg-amber-400 text-slate-950"
+                      }`}
                     >
                       <span>🛡️ Clan Team Entry</span>
+                      {registeredType === "clan" ? " (Configured)" : ""}
                     </button>
                   </div>
                 </div>
+
+                {/* Clan Team Member Selection Drawer / Panel (Backend EventClanMember feature) */}
+                {showRosterModal && (
+                  <div className="p-3.5 rounded-2xl bg-slate-900 border border-amber-400/40 space-y-3 animate-fade">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                        <span>🛡️</span>
+                        <span>Select Clan Representatives (Squad Roster)</span>
+                      </strong>
+                      <span className="text-[10px] text-slate-400 font-bold">
+                        {selectedRoster.length} Members Selected
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      Choose which clan members will represent your clan in this official campus event:
+                    </p>
+
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                      {clanMembersList.map((member) => {
+                        const isChecked = selectedRoster.includes(member.id)
+                        return (
+                          <label
+                            key={member.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition-colors ${
+                              isChecked
+                                ? "bg-amber-400/10 border-amber-400 text-white"
+                                : "bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  setSelectedRoster((prev) =>
+                                    isChecked ? prev.filter((id) => id !== member.id) : [...prev, member.id]
+                                  )
+                                }}
+                                className="w-3.5 h-3.5 text-amber-500 rounded border-slate-600 focus:ring-amber-400 cursor-pointer"
+                              />
+                              <div>
+                                <span className="font-bold block">{member.name}</span>
+                                <span className="text-[10px] text-slate-400">{member.branch}</span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-700 text-amber-300">
+                              {member.role}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setShowRosterModal(false)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={selectedRoster.length === 0 || isSavingRoster}
+                        onClick={async () => {
+                          setIsSavingRoster(true)
+                          try {
+                            await djangoApi.events.participate(event.id, "clan")
+                            await djangoApi.events.saveEventClanMembers(event.id, selectedRoster)
+                          } catch {}
+                          setIsSavingRoster(false)
+                          setRegisteredType("clan")
+                          setRegisteredSuccess(true)
+                          setShowRosterModal(false)
+                        }}
+                        className="px-3.5 py-1.5 rounded-lg text-xs font-black bg-amber-400 hover:bg-amber-500 text-slate-950 disabled:opacity-50 cursor-pointer shadow flex items-center gap-1.5"
+                      >
+                        {isSavingRoster ? (
+                          <span>Saving Squad...</span>
+                        ) : (
+                          <span>Confirm Squad Roster ({selectedRoster.length})</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
                   <a
@@ -289,9 +393,24 @@ export default function EventDetailsModal({
                 </div>
 
                 {registeredSuccess && (
-                  <div className="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
-                    <Icon name="check" size={16} />
-                    <span>Registration window opened in new tab. See you at {event.location}!</span>
+                  <div className="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span>✓</span>
+                      <span>
+                        {registeredType === "clan"
+                          ? `Clan Team Entry Confirmed (${selectedRoster.length} members locked)!`
+                          : "Individual Registration confirmed in campus directory!"}
+                      </span>
+                    </div>
+                    {registeredType === "clan" && (
+                      <button
+                        type="button"
+                        onClick={() => setShowRosterModal(true)}
+                        className="text-[11px] underline text-amber-300 hover:text-white font-bold cursor-pointer"
+                      >
+                        Edit Squad
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

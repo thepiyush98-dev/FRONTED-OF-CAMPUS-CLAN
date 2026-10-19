@@ -228,6 +228,48 @@ export default function Profile({ onOpenClan }: ProfileProps = {}) {
   // Student Clan Seeking State (from Django backend: StudentClanRecruitment)
   const [isOpenForRecruitment, setIsOpenForRecruitment] = useState(true)
 
+  // Received Clan Invitations (Backend ClanInvitation model: /clan/<name>/invite/, /invitation/<id>/accept/, /invitation/<id>/reject/)
+  const [pendingInvitations, setPendingInvitations] = useState([
+    {
+      id: 101,
+      clanName: "Binary Beasts",
+      invitedBy: "Devansh Sharma (Leader)",
+      role: "Core Systems Engineer",
+      sentAt: "Yesterday",
+      message: "We need an experienced React & TypeScript lead for our national hackathon team. We'd love to have you!",
+    },
+    {
+      id: 102,
+      clanName: "Circuit Crew",
+      invitedBy: "Kabir Singh (Leader)",
+      role: "UI & Telemetry Architect",
+      sentAt: "3 days ago",
+      message: "Looking for someone to design real-time drone telemetry dashboards.",
+    }
+  ])
+  const [invitationToast, setInvitationToast] = useState<string | null>(null)
+
+  const handleAcceptInvitation = async (invId: number) => {
+    const inv = pendingInvitations.find((i) => i.id === invId)
+    if (!inv) return
+    try {
+      await djangoApi.clans.acceptInvitation(invId)
+    } catch {}
+    setProfile((prev) => ({ ...prev, clanName: inv.clanName }))
+    setPendingInvitations((prev) => prev.filter((i) => i.id !== invId))
+    setInvitationToast(`🎉 You have officially accepted the invitation and joined ${inv.clanName}!`)
+    setTimeout(() => setInvitationToast(null), 4000)
+  }
+
+  const handleRejectInvitation = async (invId: number) => {
+    try {
+      await djangoApi.clans.rejectInvitation(invId)
+    } catch {}
+    setPendingInvitations((prev) => prev.filter((i) => i.id !== invId))
+    setInvitationToast("Clan invitation declined.")
+    setTimeout(() => setInvitationToast(null), 3000)
+  }
+
   const handleCreatePersonalProject = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newProjTitle.trim()) return
@@ -826,6 +868,88 @@ export default function Profile({ onOpenClan }: ProfileProps = {}) {
               {profile.aboutMe}
             </p>
           </div>
+
+          {/* Invitation Toast Feedback */}
+          {invitationToast && (
+            <div className="mt-4 p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl text-xs font-bold flex items-center justify-between animate-fade shadow-sm">
+              <div className="flex items-center gap-2">
+                <span>🛡️</span>
+                <span>{invitationToast}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInvitationToast(null)}
+                className="text-emerald-700 hover:text-emerald-950 font-black cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {/* Backend ClanInvitation: Received Clan Invitations */}
+          {pendingInvitations.length > 0 && (
+            <div className="mt-5 p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-slate-50 border border-amber-400/40 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                    📩 Clan Invitations Received ({pendingInvitations.length})
+                  </h3>
+                </div>
+                <span className="text-[10px] font-bold text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-md">
+                  Action Required
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 font-medium">
+                Clan leaders have sent you official invites to join their engineering rosters:
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {pendingInvitations.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="p-4 rounded-xl bg-white border border-amber-300/80 shadow-xs space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
+                          Invited to Join
+                        </span>
+                        <strong className="text-sm font-black text-slate-900 block">{inv.clanName}</strong>
+                        <span className="text-[11px] text-slate-500 font-semibold">
+                          From: {inv.invitedBy} · {inv.sentAt}
+                        </span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold">
+                        {inv.role}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-lg leading-relaxed italic border border-slate-100">
+                      "{inv.message}"
+                    </p>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleRejectInvitation(inv.id)}
+                        className="px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAcceptInvitation(inv.id)}
+                        className="px-3.5 py-1 rounded-lg text-xs font-black bg-amber-400 hover:bg-amber-500 text-slate-950 shadow-xs cursor-pointer"
+                      >
+                        ✓ Accept Invitation
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
