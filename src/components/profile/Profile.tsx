@@ -325,6 +325,13 @@ export default function Profile({ onOpenClan }: ProfileProps = {}) {
     }
   }
 
+  // Django Email Change OTP State
+  const [showEmailOtpModal, setShowEmailOtpModal] = useState(false)
+  const [emailOtp, setEmailOtp] = useState("")
+  const [emailOtpError, setEmailOtpError] = useState("")
+  const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false)
+  const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false)
+
   // Handle Edit Form Change with 150-word validation
   const handleAboutMeChange = (text: string) => {
     const words = countWords(text)
@@ -336,15 +343,9 @@ export default function Profile({ onOpenClan }: ProfileProps = {}) {
     setEditForm((prev) => ({ ...prev, aboutMe: text }))
   }
 
-  // Save Edit Profile
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault()
-    const words = countWords(editForm.aboutMe)
-    if (words > 150) {
-      alert("About Me exceeds the 150-word maximum. Please trim your text.")
-      return
-    }
-    const computedInitials = editForm.name
+  // Execute actual profile update with Django backend
+  const executeProfileUpdate = async (updatedData: ProfileData) => {
+    const computedInitials = updatedData.name
       .split(" ")
       .map((w) => w[0])
       .filter(Boolean)
@@ -352,11 +353,86 @@ export default function Profile({ onOpenClan }: ProfileProps = {}) {
       .join("")
       .toUpperCase()
 
-    setProfile({
-      ...editForm,
-      initials: computedInitials || editForm.initials,
-    })
+    const finalProfile = {
+      ...updatedData,
+      initials: computedInitials || updatedData.initials,
+    }
+
+    setProfile(finalProfile)
     setIsEditing(false)
+
+    try {
+      const formData = new FormData()
+      formData.append("name", finalProfile.name)
+      formData.append("email", finalProfile.email)
+      formData.append("department", finalProfile.department)
+      formData.append("branch", finalProfile.branch)
+      formData.append("about_me", finalProfile.aboutMe)
+      formData.append("github", finalProfile.socialLinks.github)
+      formData.append("linkedin", finalProfile.socialLinks.linkedin)
+      formData.append("instagram", finalProfile.socialLinks.instagram)
+      formData.append("youtube", finalProfile.socialLinks.youtube)
+      if (finalProfile.avatarUrl) formData.append("avatar_url", finalProfile.avatarUrl)
+      if (finalProfile.bannerUrl) formData.append("banner_url", finalProfile.bannerUrl)
+
+      await djangoApi.profile.editProfile(formData)
+    } catch {
+      // Offline fallback already updated local state
+    }
+  }
+
+  // Save Edit Profile (initiates email OTP if email changed)
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const words = countWords(editForm.aboutMe)
+    if (words > 150) {
+      alert("About Me exceeds the 150-word maximum. Please trim your text.")
+      return
+    }
+
+    // Check if campus email has been modified — if so, Django requires OTP verification
+    if (editForm.email.trim().toLowerCase() !== profile.email.trim().toLowerCase()) {
+      setIsSendingEmailOtp(true)
+      try {
+        await djangoApi.profile.sendEmailChangeOtp(editForm.email.trim())
+        setShowEmailOtpModal(true)
+        return
+      } catch (err: any) {
+        alert(err.message || "Failed to dispatch email verification OTP.")
+        return
+      } finally {
+        setIsSendingEmailOtp(false)
+      }
+    }
+
+    await executeProfileUpdate(editForm)
+  }
+
+  // Verify Email Change OTP & Commit Profile
+  const handleVerifyEmailChangeOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!emailOtp.trim() || emailOtp.trim().length < 6) {
+      setEmailOtpError("Please enter the 6-digit OTP sent to your new email.")
+      return
+    }
+
+    setIsVerifyingEmailOtp(true)
+    setEmailOtpError("")
+    try {
+      const res = await djangoApi.profile.verifyEmailChangeOtp(editForm.email.trim(), emailOtp.trim())
+      if (res.error) {
+        setEmailOtpError(res.error)
+        setIsVerifyingEmailOtp(false)
+        return
+      }
+      setShowEmailOtpModal(false)
+      setEmailOtp("")
+      await executeProfileUpdate(editForm)
+    } catch (err: any) {
+      setEmailOtpError(err.message || "Invalid OTP entered.")
+    } finally {
+      setIsVerifyingEmailOtp(false)
+    }
   }
 
   // Add a New Skill
@@ -1684,6 +1760,69 @@ export default function Profile({ onOpenClan }: ProfileProps = {}) {
                   className="px-5 py-2 rounded-xl disabled:opacity-50 font-black text-xs cursor-pointer shadow-sm hover:brightness-105 active:scale-95"
                 >
                   Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Email Change OTP Verification Modal (Django Requirement) */}
+      {showEmailOtpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade">
+          <div className="relative w-full max-w-md bg-white rounded-3xl border border-white/80 shadow-[0_30px_70px_rgba(0,0,0,0.3)] overflow-hidden animate-scale-up p-6 space-y-4">
+            <div className="text-center space-y-1.5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 font-black text-xl flex items-center justify-center mx-auto shadow-md shadow-amber-400/20">
+                ✉️
+              </div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight">Verify New Campus Email</h3>
+              <p className="text-xs text-slate-500 font-medium">
+                An OTP was dispatched to <strong>{editForm.email}</strong> by the Django auth server. Please enter the 6-digit code.
+              </p>
+            </div>
+
+            {emailOtpError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold text-center">
+                {emailOtpError}
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyEmailChangeOtp} className="space-y-4">
+              <div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={emailOtp}
+                  onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="• • • • • •"
+                  className="w-full text-center tracking-widest text-2xl font-black py-3 rounded-2xl bg-slate-50 border border-slate-300 focus:outline-none focus:border-amber-500 focus:bg-white transition-all text-slate-900"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowEmailOtpModal(false)}
+                  disabled={isVerifyingEmailOtp}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifyingEmailOtp || emailOtp.length < 6}
+                  style={{ backgroundColor: "#f5b800", color: "#0f172a" }}
+                  className="px-5 py-2.5 rounded-xl disabled:opacity-50 font-black text-xs cursor-pointer shadow-sm hover:brightness-105 active:scale-95 flex items-center gap-1.5"
+                >
+                  {isVerifyingEmailOtp ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <span>Verify & Save</span>
+                  )}
                 </button>
               </div>
             </form>

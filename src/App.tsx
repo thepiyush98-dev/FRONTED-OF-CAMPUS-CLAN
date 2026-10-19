@@ -12,6 +12,8 @@ import AdminNotifications from "@/components/notifications/notification.jsx"
 import { AboutUsModal, ContactUsModal } from "@/components/common/FooterModals"
 import { useAuth } from "@/context/AuthContext"
 import EventDetailsModal, { DetailedEvent } from "@/components/events/EventDetailsModal"
+import CreateClanModal from "@/components/community/CreateClanModal"
+import { djangoApi } from "@/services/djangoApi"
 
 type AdminPage = "overview" | "community" | "events" | "trophies" | "reports"
 type StudentPage = "home" | "clans" | "events" | "posts" | "profile" | "messages" | "clan-profile"
@@ -2295,12 +2297,64 @@ function StudentClans({
   onOpenClan?: (clanName: string) => void
 }) {
   const [query, setQuery] = useState("")
+  const [clanList, setClanList] = useState(clans)
   const [requested, setRequested] = useState<string[]>([])
-  const visible = clans.filter((clan) =>
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [joinFeedback, setJoinFeedback] = useState<string | null>(null)
+
+  const visible = clanList.filter((clan) =>
     `${clan.name} ${clan.focus}`.toLowerCase().includes(query.toLowerCase()),
   )
+
+  const handleToggleJoinClan = async (clanName: string) => {
+    const isAlreadyRequested = requested.includes(clanName)
+    try {
+      if (isAlreadyRequested) {
+        await djangoApi.clans.cancelJoinRequest(clanName)
+        setRequested((all) => all.filter((n) => n !== clanName))
+        setJoinFeedback(`Cancelled join request for ${clanName}`)
+      } else {
+        await djangoApi.clans.sendJoinRequest(clanName)
+        setRequested((all) => [...all, clanName])
+        setJoinFeedback(`Join request submitted to ${clanName}! Leader notified.`)
+      }
+      setTimeout(() => setJoinFeedback(null), 3500)
+    } catch {
+      // Graceful fallback
+      if (isAlreadyRequested) {
+        setRequested((all) => all.filter((n) => n !== clanName))
+      } else {
+        setRequested((all) => [...all, clanName])
+      }
+    }
+  }
+
+  const handleClanCreated = (newClan: any) => {
+    setClanList((prev) => [newClan, ...prev])
+    setJoinFeedback(`Clan "${newClan.name}" created successfully!`)
+    setTimeout(() => setJoinFeedback(null), 4000)
+    onOpenClan?.(newClan.name)
+  }
+
   return (
     <div className="student-page space-y-6">
+      {/* Join Request / Action Notification Banner */}
+      {joinFeedback && (
+        <div className="p-3.5 bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl text-xs font-bold flex items-center justify-between animate-fade shadow-sm">
+          <div className="flex items-center gap-2">
+            <span>🛡️</span>
+            <span>{joinFeedback}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setJoinFeedback(null)}
+            className="text-amber-700 hover:text-amber-950 font-black cursor-pointer"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4">
         <div>
           <span className="text-[11px] font-black uppercase tracking-widest text-amber-600 block mb-1">
@@ -2313,12 +2367,19 @@ function StudentClans({
             Meet ambitious students who are serious about building, competing, and growing together.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-black text-xs bg-slate-900 hover:bg-slate-800 text-white shadow-sm active:scale-95 transition-all cursor-pointer border border-slate-700"
+          >
+            <span>+ Create Clan</span>
+          </button>
           <button
             type="button"
             onClick={() => onOpenClan?.("Pixel Pirates")}
             style={{ backgroundColor: "#f5b800", color: "#0f172a" }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-xs shadow-sm hover:brightness-105 active:scale-95 transition-all cursor-pointer border border-amber-400"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-black text-xs shadow-sm hover:brightness-105 active:scale-95 transition-all cursor-pointer border border-amber-400"
           >
             <span>🛡️ My Clan: Pixel Pirates</span>
           </button>
@@ -2340,14 +2401,17 @@ function StudentClans({
             clan={clan as any}
             isRequested={requested.includes(clan.name)}
             onOpen={() => onOpenClan?.(clan.name)}
-            onJoin={() =>
-              setRequested((all) =>
-                all.includes(clan.name) ? all.filter((n) => n !== clan.name) : [...all, clan.name]
-              )
-            }
+            onJoin={() => handleToggleJoinClan(clan.name)}
           />
         ))}
       </div>
+
+      {/* Found a New Clan Modal */}
+      <CreateClanModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onClanCreated={handleClanCreated}
+      />
     </div>
   )
 }

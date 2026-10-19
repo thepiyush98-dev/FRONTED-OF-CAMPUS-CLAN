@@ -3,6 +3,7 @@ import GlassCard from "@/components/common/GlassCard"
 import Icon from "@/components/common/Icon"
 import { MonthlyReportSummary } from "@/types"
 import api from "@/services/api"
+import { djangoApi } from "@/services/djangoApi"
 
 interface ReportsViewProps {
   totalStudents: number
@@ -47,14 +48,17 @@ export default function ReportsView({
     monthlyClanApplications: 28,
   }
 
-  // Section 11 PDF Generation Workflow via AJAX
-  async function handleDownloadPDF() {
+  const [exportFormat, setExportFormat] = useState<"pdf" | "csv" | "excel" | "json">("pdf")
+
+  // Section 11 & Django Backend Multi-Format Export Workflow
+  async function handleDownload(format: "pdf" | "csv" | "excel" | "json" = "pdf") {
     if (selectedMonth === "December") {
       // Demonstration of "No Data" state for future period
       setReportState("empty")
       return
     }
 
+    setExportFormat(format)
     setReportState("generating")
     setGenerationProgress(20)
 
@@ -63,7 +67,16 @@ export default function ReportsView({
         setGenerationProgress((prev) => (prev < 85 ? prev + 20 : prev))
       }, 200)
 
-      // Asynchronous AJAX call to backend
+      // Trigger download via Django Backend endpoint (/campus-admin/reports/export/<format>/)
+      const downloadUrl = djangoApi.admin.getReportDownloadUrl(format)
+      const anchor = document.createElement("a")
+      anchor.href = downloadUrl
+      anchor.download = `Campus_Report_${selectedMonth}_${selectedYear}.${format === "excel" ? "xlsx" : format}`
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+
+      // Sync with api.reports
       await api.reports.generateMonthly(selectedMonth, parseInt(selectedYear))
 
       clearInterval(progressTimer)
@@ -234,19 +247,49 @@ export default function ReportsView({
               Generate an official, tamper-evident PDF summary for faculty records and NAAC committee evaluations.
             </p>
 
-            {/* Interaction States directly reflecting Section 11 Table */}
+            {/* Interaction States directly reflecting Section 11 Table & Django Exports */}
             {reportState === "ready" && (
               <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={handleDownloadPDF}
-                  className="w-full py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow-md shadow-amber-400/20 transition-all flex items-center justify-center gap-2"
+                  onClick={() => handleDownload("pdf")}
+                  className="w-full py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Icon name="download" size={16} />
                   <span>Download Monthly Report (PDF)</span>
                 </button>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Additional Export Formats (Django API)
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDownload("csv")}
+                      className="py-2 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[11px] transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <span>📊 CSV</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload("excel")}
+                      className="py-2 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[11px] transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <span>📗 Excel</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload("json")}
+                      className="py-2 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[11px] transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <span>⚡ JSON</span>
+                    </button>
+                  </div>
+                </div>
+
                 <span className="block text-[11px] text-slate-400 text-center">
-                  Format: Standard A4 Institutional PDF
+                  Tamper-evident institutional export directly from Django reporting pipeline
                 </span>
               </div>
             )}
@@ -254,7 +297,7 @@ export default function ReportsView({
             {reportState === "generating" && (
               <div className="space-y-3 py-2">
                 <div className="flex justify-between text-xs font-semibold text-slate-700">
-                  <span>Generating PDF summary...</span>
+                  <span>Generating {exportFormat.toUpperCase()} report...</span>
                   <span>{generationProgress}%</span>
                 </div>
                 <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -276,16 +319,16 @@ export default function ReportsView({
                 </div>
                 <div>
                   <strong className="text-xs font-bold text-emerald-900 block">
-                    Report Downloaded Successfully
+                    {exportFormat.toUpperCase()} Export Generated Successfully
                   </strong>
                   <span className="text-[11px] text-emerald-700 block mt-0.5">
-                    Saved as <code>Campus_Report_{selectedMonth}_{selectedYear}.pdf</code>
+                    Saved as <code>Campus_Report_{selectedMonth}_{selectedYear}.{exportFormat === "excel" ? "xlsx" : exportFormat}</code>
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setReportState("ready")}
-                  className="text-xs font-bold text-emerald-800 underline hover:no-underline"
+                  className="text-xs font-bold text-emerald-800 underline hover:no-underline cursor-pointer"
                 >
                   Generate another report
                 </button>

@@ -132,14 +132,14 @@ export const StudentsAPI = {
     )
   },
 
-  /** POST /api/students/:id/suspend — Suspend student per Section 6 */
+  /** POST /campus-admin/student/:id/suspend/ — Suspend student per Django backend */
   async suspend(id: string, reason: string, durationDays: number): Promise<Student> {
     const end = new Date()
     end.setDate(end.getDate() + durationDays)
     const endDateStr = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 
     return ajaxRequest<Student>(
-      `/students/${id}/suspend`,
+      `/campus-admin/student/${id}/suspend/`,
       {
         method: "POST",
         body: JSON.stringify({ reason, durationDays, endDate: endDateStr }),
@@ -162,10 +162,10 @@ export const StudentsAPI = {
     )
   },
 
-  /** POST /api/students/:id/restore — Lift suspension and restore access */
+  /** POST /campus-admin/student/:id/unsuspend/ — Lift suspension and restore access */
   async restore(id: string): Promise<Student> {
     return ajaxRequest<Student>(
-      `/students/${id}/restore`,
+      `/campus-admin/student/${id}/unsuspend/`,
       { method: "POST" },
       () => {
         const index = localDB.students.findIndex((s) => s.id === id)
@@ -190,14 +190,14 @@ export const ClansAPI = {
     return ajaxRequest<Clan[]>("/clans", { method: "GET" }, () => [...localDB.clans])
   },
 
-  /** POST /api/clans/:id/suspend — Suspend clan */
+  /** POST /campus-admin/clan/:id/suspend/ — Suspend clan */
   async suspend(id: string, reason: string, durationDays: number): Promise<Clan> {
     const end = new Date()
     end.setDate(end.getDate() + durationDays)
     const endDateStr = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 
     return ajaxRequest<Clan>(
-      `/clans/${id}/suspend`,
+      `/campus-admin/clan/${id}/suspend/`,
       {
         method: "POST",
         body: JSON.stringify({ reason, durationDays }),
@@ -220,10 +220,10 @@ export const ClansAPI = {
     )
   },
 
-  /** POST /api/clans/:id/restore — Restore clan */
+  /** POST /campus-admin/clan/:id/unsuspend/ — Restore clan */
   async restore(id: string): Promise<Clan> {
     return ajaxRequest<Clan>(
-      `/clans/${id}/restore`,
+      `/campus-admin/clan/${id}/unsuspend/`,
       { method: "POST" },
       () => {
         const index = localDB.clans.findIndex((c) => c.id === id)
@@ -238,11 +238,14 @@ export const ClansAPI = {
     )
   },
 
-  /** DELETE /api/clans/:clanId/members/:memberId — Remove student from clan */
+  /** POST /clan/:clanId/remove-member/ — Remove student from clan */
   async removeMember(clanId: string, memberId: string): Promise<Clan> {
     return ajaxRequest<Clan>(
-      `/clans/${clanId}/members/${memberId}`,
-      { method: "DELETE" },
+      `/clan/${clanId}/remove-member/`,
+      {
+        method: "POST",
+        body: JSON.stringify({ student_id: memberId }),
+      },
       () => {
         const clan = localDB.clans.find((c) => c.id === clanId)
         if (!clan) throw new Error("Clan not found")
@@ -319,10 +322,11 @@ export const TrophiesAPI = {
     return ajaxRequest<Trophy[]>("/trophies", { method: "GET" }, () => [...localDB.trophies])
   },
 
-  /** POST /api/trophies — Award trophy with 48h compliance */
+  /** POST /campus-admin/clan/:clanId/trophy/allocate/ — Award trophy with Django backend */
   async award(trophy: Omit<Trophy, "id">): Promise<Trophy> {
+    const clanId = trophy.clanId || "1"
     return ajaxRequest<Trophy>(
-      "/trophies",
+      `/campus-admin/clan/${clanId}/trophy/allocate/`,
       {
         method: "POST",
         body: JSON.stringify(trophy),
@@ -335,6 +339,19 @@ export const TrophiesAPI = {
         }
         localDB.trophies.unshift(newTrophy)
         return newTrophy
+      }
+    )
+  },
+
+  /** POST /campus-admin/trophy/:id/delete/ — Delete trophy */
+  async delete(id: string): Promise<{ success: boolean }> {
+    return ajaxRequest<{ success: boolean }>(
+      `/campus-admin/trophy/${id}/delete/`,
+      { method: "POST" },
+      () => {
+        const idx = localDB.trophies.findIndex((t) => t.id === id)
+        if (idx !== -1) localDB.trophies.splice(idx, 1)
+        return { success: true }
       }
     )
   },
