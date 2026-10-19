@@ -326,6 +326,17 @@ function Icon({ name, size = 20 }: { name: string; size?: number }) {
         <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
       </>
     ),
+    eye: (
+      <>
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+    eyeOff: (
+      <>
+        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61M2 2l20 20" />
+      </>
+    ),
   }
   return (
     <svg
@@ -706,6 +717,7 @@ function LoginModal({
   // Login State
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("••••••••")
+  const [showPassword, setShowPassword] = useState(false)
   const [loginError, setLoginError] = useState("")
   const [loginLoading, setLoginLoading] = useState(false)
 
@@ -988,119 +1000,47 @@ function LoginModal({
   }
 
   return (
-    <div className="modal-backdrop backdrop-blur-md bg-slate-950/60" onMouseDown={onClose}>
-      <section
-        className="relative w-full max-w-3xl bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.3)] overflow-hidden max-h-[92vh] flex flex-col md:flex-row border border-white/60 my-auto animate-modal-up"
+    <div className="modal-backdrop backdrop-blur-md bg-[#0c0d20]/80 flex flex-col items-center justify-center p-4 overflow-y-auto" onMouseDown={onClose}>
+      <div
+        className={`relative w-full ${
+          authMode === "register" ? "max-w-lg" : "max-w-[400px]"
+        } my-auto animate-modal-up`}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        {/* Floating Close Button */}
-        <button
-          className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-slate-100/80 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all cursor-pointer shadow-xs backdrop-blur-sm"
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          <Icon name="close" size={16} />
-        </button>
+        <section className="relative w-full bg-white rounded-3xl p-8 sm:p-9 shadow-2xl border border-slate-100/90 text-left max-h-[88vh] overflow-y-auto">
+          {/* Floating Close Button */}
+          <button
+            className="absolute top-5 right-5 z-30 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <Icon name="close" size={15} />
+          </button>
 
-        {/* LEFT COLUMN: MINIMAL BRANDING PANEL (WITHOUT EXTRA CARDS) */}
-        <div className="hidden md:flex md:w-5/12 bg-gradient-to-br from-[#0c121e]/95 via-[#141d2e]/95 to-[#0c121e]/95 backdrop-blur-xl p-8 lg:p-10 flex-col justify-between text-white relative overflow-hidden border-r border-white/10 shrink-0">
-          {/* Subtle Ambient Glow */}
-          <div className="absolute -top-20 -left-20 w-60 h-60 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 -right-20 w-60 h-60 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
-
-          {/* Logo & Branding */}
-          <div className="relative z-10 space-y-4 my-auto">
-            <div className="flex items-center gap-3">
-              <span className="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 font-black text-xl flex items-center justify-center shadow-lg -rotate-3 border border-amber-300">
-                CC
-              </span>
-              <div>
-                <strong className="text-xl font-black tracking-tight block text-white font-heading">
-                  CAMPUS CLANS
-                </strong>
-                <small className="text-[10px] text-amber-400 font-extrabold uppercase tracking-widest block">
-                  Connect · Collaborate · Grow
-                </small>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed font-medium">
-              Discover what&apos;s happening next in your campus network. Join student clans, build real-world products, and win hackathons.
-            </p>
-          </div>
-
-          {/* Minimal Bottom Tagline */}
-          <div className="relative z-10 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400 font-medium">
-            <span>Find your people. Build your thing.</span>
-            <span className="text-amber-400 font-bold">© 2026</span>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: GLASSY MINIMAL FORM CONTAINER */}
-        <div className="w-full md:w-7/12 p-6 sm:p-8 lg:p-10 overflow-y-auto flex flex-col justify-between space-y-4 max-h-[92vh] bg-white/70 backdrop-blur-md">
-          {/* Mobile Logo (Visible only on small phone screens) */}
-          <div className="md:hidden flex items-center gap-2.5 pb-2 border-b border-slate-100">
-            <span className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center shadow">
-              CC
-            </span>
-            <strong className="text-base font-black tracking-tight text-slate-900">
-              CAMPUS CLANS
-            </strong>
-          </div>
-
-          {/* ⚡ MINIMAL QUICK DEMO TEST BAR */}
-          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-amber-500/10 border border-amber-400/25 backdrop-blur-sm">
-            <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1.5 pl-1 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              <span>Quick Demo:</span>
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => onSubmit("student", "aarav.k@campus.edu")}
-                className="px-2.5 py-1 rounded-lg bg-white/90 hover:bg-slate-900 hover:text-white border border-amber-300 font-bold text-[11px] text-slate-800 transition-all cursor-pointer shadow-xs active:scale-95"
-                title="Login as Student (Aarav Khanna - User)"
-              >
-                🎓 Student
-              </button>
-              <button
-                type="button"
-                onClick={() => onSubmit("admin", "admin@campus.edu")}
-                className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 border border-amber-500 font-black text-[11px] text-slate-950 transition-all cursor-pointer shadow-xs active:scale-95"
-                title="Login as Campus Admin (Maya Kapoor - Admin)"
-              >
-                🛡️ Admin
-              </button>
-            </div>
-          </div>
-
-          {/* 1. SIGN IN VIEW (UNIFIED: AUTO-DETECTS ADMIN & STUDENT AUTOMATICALLY) */}
+          {/* 1. SIGN IN VIEW (EXACT MATCH OF IMAGE 2) */}
           {authMode === "login" && (
-            <div className="space-y-4 my-auto">
-              <div className="text-left space-y-1">
-                <span className="text-[10px] font-black tracking-widest text-amber-600 uppercase">
-                  Authentication & Access
-                </span>
-                <h2 className="text-2xl font-black tracking-tight text-slate-900 font-heading">
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight font-heading">
                   Sign In
                 </h2>
-                <p className="text-xs text-slate-500 font-medium">
-                  Enter your campus username or college email to continue.
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  Welcome back! Please sign in to your account below.
                 </p>
               </div>
 
-              <form onSubmit={submitLogin} className="space-y-3.5 text-left">
+              <form onSubmit={submitLogin} className="space-y-3.5 pt-1">
                 {loginError && (
                   <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
                     {loginError}
                   </div>
                 )}
 
-                {/* Username or College Email Input */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    Username or College Email
+                {/* Email / Username */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-800 block">
+                    Email
                   </label>
                   <input
                     value={loginEmail}
@@ -1108,82 +1048,111 @@ function LoginModal({
                       setLoginEmail(e.target.value)
                       setLoginError("")
                     }}
-                    placeholder="e.g. aaravk or admin"
-                    className="w-full text-xs"
+                    placeholder="Enter your email..."
+                    className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-400"
                     autoFocus
                     required
                   />
                 </div>
 
-                {/* Password Input with Forgot Password link right underneath */}
-                <div className="space-y-1">
+                {/* Password field with right-aligned Forgot password? and eye toggle inside */}
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 block">Password</label>
+                    <label className="text-xs font-bold text-slate-800">Password</label>
                     <button
                       type="button"
                       onClick={() => {
                         setAuthMode("forgot")
                         setForgotEmail(loginEmail)
                       }}
-                      className="text-xs text-amber-600 font-bold hover:underline cursor-pointer"
+                      className="text-xs text-slate-500 hover:text-indigo-600 font-medium cursor-pointer transition-colors"
                     >
                       Forgot password?
                     </button>
                   </div>
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full text-xs"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full p-3 pr-10 rounded-xl border border-slate-200 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-400"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      <Icon name={showPassword ? "eyeOff" : "eye"} size={16} />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Sign In Button */}
+                {/* Purple Sign In Button matching Image 2 */}
                 <button
-                  className="primary-button w-full !py-3 font-bold text-xs flex items-center justify-center gap-2 mt-2 shadow-sm"
                   type="submit"
                   disabled={loginLoading}
+                  style={{ backgroundColor: "#6155ea", color: "#ffffff" }}
+                  className="w-full py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#5244ca] active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
                 >
-                  <span>{loginLoading ? "Authenticating..." : "Sign In"}</span>
-                  <Icon name="arrow" size={15} />
+                  <span>{loginLoading ? "Signing in..." : "Sign in"}</span>
+                </button>
+
+                {/* Sign in with Google Button matching Image 2 */}
+                <button
+                  type="button"
+                  onClick={() => onSubmit("student", "aarav.k@campus.edu")}
+                  className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-98"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                  </svg>
+                  <span>Sign in with Google</span>
                 </button>
               </form>
 
-              {/* Instagram-style Bottom Switcher Box */}
-              <div className="p-4 rounded-2xl border border-slate-200/90 bg-white/80 backdrop-blur-sm text-center text-xs text-slate-600 font-medium">
-                Don&apos;t have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode("register")
-                    setRegEmail(loginEmail)
-                  }}
-                  className="text-amber-600 font-black hover:underline cursor-pointer ml-1"
-                >
-                  Sign up
-                </button>
+              {/* Minimal Demo 1-Click Access */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                <span>Quick Demo:</span>
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => onSubmit("student", "aarav.k@campus.edu")}
+                    className="text-slate-600 hover:text-indigo-600 underline font-bold cursor-pointer"
+                  >
+                    Student Demo
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => onSubmit("admin", "admin@campus.edu")}
+                    className="text-slate-600 hover:text-indigo-600 underline font-bold cursor-pointer"
+                  >
+                    Admin Demo
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* 2. SIGN UP / REGISTRATION VIEW (OTP VERIFICATION + LIVE USERNAME CHECK) */}
+          {/* 2. SIGN UP / REGISTRATION VIEW (EXACT MATCH OF IMAGE 1) */}
           {authMode === "register" && (
-            <div className="space-y-4 my-auto">
-              <div className="text-left space-y-1">
-                <span className="text-[10px] font-black tracking-widest text-amber-600 uppercase">
-                  New Student Registration
-                </span>
-                <h2 className="text-2xl font-black tracking-tight text-slate-900 font-heading">
-                  Create your account
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
+                  Create an Account
                 </h2>
-                <p className="text-xs text-slate-500 font-medium">
-                  Verify your official college email via OTP to join clans and events.
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Verify college email & register with campus credentials.
                 </p>
               </div>
 
-              <form onSubmit={submitRegister} className="space-y-3 text-left">
+              <form onSubmit={submitRegister} className="space-y-3">
                 {regError && (
                   <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
                     {regError}
@@ -1195,11 +1164,11 @@ function LoginModal({
                   </div>
                 )}
 
-                {/* Step 1: College Email OTP Verification Box */}
+                {/* College Email OTP Verification Row */}
                 <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-black text-amber-950 uppercase tracking-wider block">
-                      1. College Email OTP Verification
+                      College Email Verification
                     </label>
                     {otpVerified && (
                       <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center gap-1">
@@ -1219,7 +1188,7 @@ function LoginModal({
                       }}
                       placeholder="your.name@campus.edu"
                       disabled={otpVerified}
-                      className="flex-1 text-xs"
+                      className="flex-1 text-xs p-2 rounded-xl border border-slate-200 bg-white"
                       required
                     />
                     <button
@@ -1240,7 +1209,7 @@ function LoginModal({
                         value={regOtp}
                         onChange={(e) => setRegOtp(e.target.value)}
                         placeholder="Enter 6-digit OTP (e.g. 123456)"
-                        className="flex-1 text-xs tracking-widest font-mono font-bold"
+                        className="flex-1 text-xs p-2 tracking-widest font-mono font-bold rounded-xl border border-slate-200 bg-white"
                       />
                       <button
                         type="button"
@@ -1254,24 +1223,24 @@ function LoginModal({
                   )}
                 </div>
 
-                {/* Step 2: Full Name & Department */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Exact Fields from Image 1: Full Name & Department */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Full Name</label>
+                    <label className="text-xs font-bold text-slate-800 block">Full Name</label>
                     <input
                       value={regName}
                       onChange={(e) => setRegName(e.target.value)}
                       placeholder="e.g. Aarav Khanna"
-                      className="w-full text-xs"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none"
                       required
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Department</label>
+                    <label className="text-xs font-bold text-slate-800 block">Department</label>
                     <select
                       value={regDept}
                       onChange={(e) => setRegDept(e.target.value)}
-                      className="w-full p-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-medium bg-white focus:border-amber-400 outline-none"
                     >
                       <option value="School of Engineering">School of Engineering</option>
                       <option value="School of Computer Applications">School of Computer Applications</option>
@@ -1282,35 +1251,35 @@ function LoginModal({
                   </div>
                 </div>
 
-                {/* Step 3: Branch & Real-time Username Check */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Exact Fields from Image 1: Branch / Major & Desired Username */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Branch / Major</label>
+                    <label className="text-xs font-bold text-slate-800 block">Branch / Major</label>
                     <input
                       value={regBranch}
                       onChange={(e) => setRegBranch(e.target.value)}
                       placeholder="B.Tech CSE"
-                      className="w-full text-xs"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none"
                       required
                     />
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700 block">Desired Username</label>
+                      <label className="text-xs font-bold text-slate-800 block">Desired Username</label>
                       {usernameCheck.checking && (
-                        <span className="text-[10px] text-slate-500 font-semibold animate-pulse">Checking...</span>
+                        <span className="text-[10px] text-slate-400 font-semibold animate-pulse">Checking...</span>
                       )}
                     </div>
                     <input
                       value={regUsername}
                       onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
                       placeholder="aaravkhanna"
-                      className={`w-full text-xs ${
+                      className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
                         usernameCheck.available === true
-                          ? "!border-emerald-500 bg-emerald-50/20"
+                          ? "border-emerald-500 bg-emerald-50/20"
                           : usernameCheck.available === false
-                          ? "!border-rose-500 bg-rose-50/20"
-                          : ""
+                          ? "border-rose-500 bg-rose-50/20"
+                          : "border-slate-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
                       }`}
                       required
                     />
@@ -1326,73 +1295,59 @@ function LoginModal({
                   </div>
                 </div>
 
-                {/* Step 4: Password Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Exact Fields from Image 1: Password (min 8 chars) with yellow border & Confirm Password */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Password (min 8 chars)</label>
+                    <label className="text-xs font-bold text-slate-800 block">Password (min 8 chars)</label>
                     <input
                       type="password"
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full text-xs"
+                      className="w-full p-2.5 rounded-xl border-2 border-amber-300 bg-amber-50/15 text-xs focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none"
                       required
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Confirm Password</label>
+                    <label className="text-xs font-bold text-slate-800 block">Confirm Password</label>
                     <input
                       type="password"
                       value={regConfirmPassword}
                       onChange={(e) => setRegConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full text-xs"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 outline-none"
                       required
                     />
                   </div>
                 </div>
 
-                {/* Create Account Button */}
+                {/* Submit Button exactly matching Image 1: Create Account & Sign In -> in yellow */}
                 <button
                   type="submit"
                   disabled={!otpVerified || regLoading || usernameCheck.available === false}
-                  className="primary-button w-full !py-3 font-bold text-xs flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  style={{ backgroundColor: "#fde047", color: "#451a03" }}
+                  className="w-full py-3.5 rounded-xl font-bold text-xs shadow-sm hover:brightness-105 active:scale-98 transition-all cursor-pointer border border-amber-300 flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>{regLoading ? "Creating Account..." : "Create Account & Sign In"}</span>
-                  <Icon name="arrow" size={15} />
+                  <span>→</span>
                 </button>
               </form>
-
-              {/* Instagram-style Bottom Switcher Box */}
-              <div className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 text-center text-xs text-slate-600 font-medium">
-                Have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setAuthMode("login")}
-                  className="text-amber-600 font-black hover:underline cursor-pointer ml-1"
-                >
-                  Log in
-                </button>
-              </div>
             </div>
           )}
 
-          {/* 3. FORGOT PASSWORD VIEW (OTP BASED PASSWORD RESET) */}
+          {/* 3. FORGOT PASSWORD VIEW */}
           {authMode === "forgot" && (
-            <div className="space-y-4 my-auto">
-              <div className="text-left space-y-1">
-                <span className="text-[10px] font-black tracking-widest text-amber-600 uppercase">
-                  Account Recovery
-                </span>
-                <h2 className="text-2xl font-black tracking-tight text-slate-900 font-heading">
-                  Reset your password
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
+                  Reset Password
                 </h2>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
                   Enter your registered college email to verify OTP and set a new password.
                 </p>
               </div>
 
-              <form onSubmit={submitForgot} className="space-y-3.5 text-left">
+              <form onSubmit={submitForgot} className="space-y-3.5">
                 {forgotError && (
                   <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
                     {forgotError}
@@ -1406,7 +1361,7 @@ function LoginModal({
 
                 {/* Step 1: Registered Email Input */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Registered College Email</label>
+                  <label className="text-xs font-bold text-slate-800 block">Registered College Email</label>
                   <div className="flex gap-2">
                     <input
                       type="email"
@@ -1414,7 +1369,7 @@ function LoginModal({
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="student@campus.edu"
                       disabled={forgotOtpVerified}
-                      className="flex-1 text-xs"
+                      className="flex-1 text-xs p-2.5 rounded-xl border border-slate-200"
                       required
                     />
                     <button
@@ -1441,7 +1396,7 @@ function LoginModal({
                         value={forgotOtp}
                         onChange={(e) => setForgotOtp(e.target.value)}
                         placeholder="123456"
-                        className="flex-1 text-xs font-mono tracking-widest font-bold"
+                        className="flex-1 text-xs p-2 font-mono tracking-widest font-bold rounded-xl border border-slate-200 bg-white"
                         required
                       />
                       <button
@@ -1459,30 +1414,30 @@ function LoginModal({
                 {/* Step 3: New Password Inputs */}
                 {forgotOtpVerified && (
                   <div className="space-y-3 pt-1">
-                    <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                    <div className="p-2 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
                       ✓ OTP Verified! Set your new password below.
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">New Password (min 8 chars)</label>
+                        <label className="text-xs font-bold text-slate-800 block">New Password (min 8 chars)</label>
                         <input
                           type="password"
                           value={forgotPassword}
                           onChange={(e) => setForgotPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full text-xs"
+                          className="w-full p-2.5 rounded-xl border border-slate-200 text-xs outline-none"
                           required
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">Confirm New Password</label>
+                        <label className="text-xs font-bold text-slate-800 block">Confirm New Password</label>
                         <input
                           type="password"
                           value={forgotConfirmPassword}
                           onChange={(e) => setForgotConfirmPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full text-xs"
+                          className="w-full p-2.5 rounded-xl border border-slate-200 text-xs outline-none"
                           required
                         />
                       </div>
@@ -1491,30 +1446,60 @@ function LoginModal({
                     <button
                       type="submit"
                       disabled={forgotResetting}
-                      className="primary-button w-full !py-3 font-bold text-xs flex items-center justify-center gap-2 mt-2 shadow-sm"
+                      style={{ backgroundColor: "#fde047", color: "#451a03" }}
+                      className="w-full py-3.5 rounded-xl font-bold text-xs shadow-sm hover:brightness-105 active:scale-98 transition-all cursor-pointer border border-amber-300 flex items-center justify-center gap-2 mt-2"
                     >
                       <span>{forgotResetting ? "Updating..." : "Reset Password & Sign In"}</span>
-                      <Icon name="check" size={15} />
+                      <span>→</span>
                     </button>
                   </div>
                 )}
               </form>
-
-              {/* Instagram-style Bottom Switcher Box */}
-              <div className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 text-center text-xs text-slate-600 font-medium">
-                Remember your password?{" "}
-                <button
-                  type="button"
-                  onClick={() => setAuthMode("login")}
-                  className="text-amber-600 font-black hover:underline cursor-pointer ml-1"
-                >
-                  Back to Log in
-                </button>
-              </div>
             </div>
           )}
-        </div>
-      </section>
+        </section>
+
+        {/* Bottom Switcher Caption on dark backdrop outside card (EXACT MATCH OF IMAGE 2) */}
+        {authMode === "login" && (
+          <p className="text-center pt-3 text-xs text-slate-300 font-medium">
+            New to Campus Clans?{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("register")
+                setRegEmail(loginEmail)
+              }}
+              className="text-[#998af8] hover:text-white font-bold hover:underline cursor-pointer ml-1"
+            >
+              Request demo today.
+            </button>
+          </p>
+        )}
+        {authMode === "register" && (
+          <p className="text-center pt-3 text-xs text-slate-300 font-medium">
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={() => setAuthMode("login")}
+              className="text-amber-300 hover:text-amber-100 font-bold hover:underline cursor-pointer ml-1"
+            >
+              Sign in
+            </button>
+          </p>
+        )}
+        {authMode === "forgot" && (
+          <p className="text-center pt-3 text-xs text-slate-300 font-medium">
+            Remember your password?{" "}
+            <button
+              type="button"
+              onClick={() => setAuthMode("login")}
+              className="text-amber-300 hover:text-amber-100 font-bold hover:underline cursor-pointer ml-1"
+            >
+              Sign in
+            </button>
+          </p>
+        )}
+      </div>
     </div>
   )
 }
