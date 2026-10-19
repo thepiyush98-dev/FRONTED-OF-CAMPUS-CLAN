@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import Icon from '@/components/common/Icon'
+import { djangoApi } from '@/services/djangoApi'
 
 export interface DetailedEvent {
   id: number | string
@@ -230,6 +231,38 @@ export default function EventDetailsModal({
                   </div>
                 </div>
 
+                <div className="space-y-2 pt-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                    Choose Participation Mode (Individual vs Clan Team):
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await djangoApi.events.participate(event.id, "student")
+                        } catch {}
+                        setRegisteredSuccess(true)
+                      }}
+                      className="py-2 px-3 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>👤 Individual Student</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await djangoApi.events.participate(event.id, "clan")
+                        } catch {}
+                        setRegisteredSuccess(true)
+                      }}
+                      className="py-2 px-3 rounded-xl font-bold text-xs bg-amber-400 hover:bg-amber-500 text-slate-950 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>🛡️ Clan Team Entry</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
                   <a
                     href={regLink}
@@ -238,7 +271,7 @@ export default function EventDetailsModal({
                     onClick={() => setRegisteredSuccess(true)}
                     className="flex-1 py-2.5 px-4 rounded-xl font-bold text-xs bg-amber-400 hover:bg-amber-500 text-slate-950 flex items-center justify-center gap-2 shadow-md shadow-amber-400/20 active:scale-98 transition-all cursor-pointer"
                   >
-                    <span>🚀 Register Now for Event</span>
+                    <span>🚀 Open External Portal</span>
                     <Icon name="arrowRight" size={15} />
                   </a>
 

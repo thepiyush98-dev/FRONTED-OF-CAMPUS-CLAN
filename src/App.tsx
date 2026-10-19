@@ -668,24 +668,172 @@ function LoginModal({
   onSubmit: (role: UserRole, email?: string) => void
   initialRole?: UserRole
 }) {
+  const { sendOtp, verifyOtp, registerStudent } = useAuth()
+  const [authMode, setAuthMode] = useState<"login" | "register" | "forgot">("login")
   const [role, setRole] = useState<UserRole>(initialRole)
-  const [email, setEmail] = useState("")
-  const [error, setError] = useState("")
+  
+  // Login State
+  const [loginEmail, setLoginEmail] = useState("")
+  const [loginPassword, setLoginPassword] = useState("••••••••")
+  const [loginError, setLoginError] = useState("")
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  // Register State
+  const [regName, setRegName] = useState("")
+  const [regEmail, setRegEmail] = useState("")
+  const [regDept, setRegDept] = useState("School of Engineering")
+  const [regBranch, setRegBranch] = useState("B.Tech CSE")
+  const [regUsername, setRegUsername] = useState("")
+  const [regPassword, setRegPassword] = useState("")
+  const [regConfirmPassword, setRegConfirmPassword] = useState("")
+  const [regOtp, setRegOtp] = useState("")
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpVerified, setOtpVerified] = useState(false)
+  const [otpSending, setOtpSending] = useState(false)
+  const [otpVerifying, setOtpVerifying] = useState(false)
+  const [regStatusMsg, setRegStatusMsg] = useState("")
+  const [regError, setRegError] = useState("")
+
+  // Forgot Password State
+  const [forgotEmail, setForgotEmail] = useState("")
+  const [forgotOtp, setForgotOtp] = useState("")
+  const [forgotPassword, setForgotPassword] = useState("")
+  const [forgotOtpSent, setForgotOtpSent] = useState(false)
+  const [forgotStatusMsg, setForgotStatusMsg] = useState("")
+  const [forgotError, setForgotError] = useState("")
+
+  // Handle Login Submit
+  function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const targetEmail = email.trim() || (role === "admin" ? "admin@campus.edu" : "student@campus.edu")
-    if (email.trim() && !email.includes("@")) {
-      setError("Please enter a valid campus email address.")
+    const targetEmail = loginEmail.trim() || (role === "admin" ? "admin@campus.edu" : "student@campus.edu")
+    if (loginEmail.trim() && !loginEmail.includes("@") && loginEmail.length < 3) {
+      setLoginError("Please enter a valid campus username or email.")
       return
     }
     onSubmit(role, targetEmail)
   }
 
+  // Handle Send Registration OTP
+  async function handleSendOtp() {
+    if (!regEmail.trim() || !regEmail.includes("@")) {
+      setRegError("Please enter a valid email address first.")
+      return
+    }
+    setRegSending(true)
+    setRegError("")
+    try {
+      const res = await sendOtp(regEmail.trim())
+      if (res.success) {
+        setOtpSent(true)
+        setRegStatusMsg(res.message || `OTP sent to ${regEmail}. (Demo OTP: 123456)`)
+      } else {
+        setRegError(res.error || "Failed to send OTP.")
+      }
+    } catch (e: any) {
+      setRegError(e.message || "Could not connect to auth service.")
+    } finally {
+      setRegSending(false)
+    }
+  }
+
+  // Helper for loading state
+  function setRegSending(val: boolean) {
+    setOtpSending(val)
+  }
+
+  // Handle Verify Registration OTP
+  async function handleVerifyOtp() {
+    if (!regOtp.trim() || regOtp.trim().length !== 6) {
+      setRegError("Please enter the 6-digit OTP sent to your email.")
+      return
+    }
+    setOtpVerifying(true)
+    setRegError("")
+    try {
+      const res = await verifyOtp(regEmail.trim(), regOtp.trim())
+      if (res.success) {
+        setOtpVerified(true)
+        setRegStatusMsg("✓ Email verified successfully! Now complete your credentials.")
+      } else {
+        setRegError(res.error || "Invalid or expired OTP.")
+      }
+    } catch (e: any) {
+      setRegError(e.message || "Verification failed.")
+    } finally {
+      setOtpVerifying(false)
+    }
+  }
+
+  // Handle Complete Registration
+  async function submitRegister(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!otpVerified) {
+      setRegError("Please verify your email address via OTP before registering.")
+      return
+    }
+    if (!regName.trim() || !regUsername.trim() || !regPassword) {
+      setRegError("Please fill in all required fields.")
+      return
+    }
+    if (regPassword !== regConfirmPassword) {
+      setRegError("Passwords do not match.")
+      return
+    }
+    if (regPassword.length < 8) {
+      setRegError("Password must be at least 8 characters long.")
+      return
+    }
+
+    setRegError("")
+    const res = await registerStudent({
+      name: regName.trim(),
+      department: regDept.trim(),
+      branch: regBranch.trim(),
+      email: regEmail.trim(),
+      username: regUsername.trim(),
+      password: regPassword,
+      confirm_password: regConfirmPassword,
+    })
+
+    if (res.success) {
+      onSubmit("student", regEmail.trim())
+    } else {
+      setRegError(res.error || "Registration failed.")
+    }
+  }
+
+  // Handle Forgot Password OTP Send
+  async function handleForgotSendOtp() {
+    if (!forgotEmail.trim() || !forgotEmail.includes("@")) {
+      setForgotError("Please enter your registered campus email.")
+      return
+    }
+    setForgotError("")
+    setForgotOtpSent(true)
+    setForgotStatusMsg(`Reset OTP sent to ${forgotEmail}. (Demo OTP: 123456)`)
+  }
+
+  // Handle Reset Password Submit
+  function submitForgot(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!forgotOtpSent || forgotOtp.trim().length !== 6) {
+      setForgotError("Please enter the 6-digit reset OTP.")
+      return
+    }
+    if (!forgotPassword || forgotPassword.length < 8) {
+      setForgotError("New password must be at least 8 characters long.")
+      return
+    }
+    setForgotStatusMsg("✓ Password reset successfully! You can now sign in.")
+    setTimeout(() => {
+      setAuthMode("login")
+      setLoginEmail(forgotEmail)
+    }, 1200)
+  }
+
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <section
-        className="login-modal"
+        className="login-modal max-w-lg w-full max-h-[92vh] overflow-y-auto"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <button
@@ -697,113 +845,386 @@ function LoginModal({
           <Icon name="close" />
         </button>
         <Logo />
-        <span className="kicker">AUTHENTICATION & ACCESS</span>
-        <h2>Sign in to your campus</h2>
-        <p>Choose your workspace role to enter your dedicated portal.</p>
-        <form onSubmit={submit}>
-          <div className="role-picker" aria-label="Choose account type">
-            <button
-              className={role === "student" ? "active" : ""}
-              type="button"
-              onClick={() => {
-                setRole("student")
-                setError("")
-              }}
-            >
-              <span>
-                <Icon name="users" />
-              </span>
-              <div>
-                <strong>Student (User)</strong>
-                <small>Discover clans, teammates & events</small>
-              </div>
-            </button>
-            <button
-              className={role === "admin" ? "active" : ""}
-              type="button"
-              onClick={() => {
-                setRole("admin")
-                setError("")
-              }}
-            >
-              <span>
-                <Icon name="grid" />
-              </span>
-              <div>
-                <strong>Campus Admin</strong>
-                <small>Manage campus events & reports</small>
-              </div>
-            </button>
-          </div>
-          <label>
-            Campus email
-            <input
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value)
-                setError("")
-              }}
-              placeholder={
-                role === "admin" ? "admin@campus.edu" : "student@campus.edu"
-              }
-              autoFocus
-            />
-          </label>
-          {error && <span className="field-error">{error}</span>}
-          <label>
-            Password
-            <input type="password" defaultValue="••••••••" placeholder="Enter your password" />
-          </label>
-          <button className="primary-button" type="submit">
-            Sign in as {role === "admin" ? "Campus Admin" : "Student (User)"} <Icon name="arrow" size={17} />
-          </button>
-        </form>
 
-        <div style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid #f1f5f9", display: "grid", gap: "8px" }}>
-          <small style={{ color: "#64748b", fontWeight: 700, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.5px", fontSize: "10px" }}>
-            Quick Demo Shortcuts
-          </small>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-            <button
-              type="button"
-              className="outline-button"
-              style={{
-                fontSize: "11px",
-                padding: "8px 6px",
-                minHeight: "36px",
-                background: role === "student" ? "#fff8db" : "white",
-                borderColor: role === "student" ? "#f5b800" : "#e2e8f0",
-                color: "#1e293b",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px"
-              }}
-              onClick={() => onSubmit("student", "aarav.k@campus.edu")}
-            >
-              <Icon name="users" size={14} /> Student Login
-            </button>
-            <button
-              type="button"
-              className="outline-button"
-              style={{
-                fontSize: "11px",
-                padding: "8px 6px",
-                minHeight: "36px",
-                background: role === "admin" ? "#fff8db" : "white",
-                borderColor: role === "admin" ? "#f5b800" : "#e2e8f0",
-                color: "#1e293b",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px"
-              }}
-              onClick={() => onSubmit("admin", "admin@campus.edu")}
-            >
-              <Icon name="grid" size={14} /> Admin Login
-            </button>
-          </div>
-        </div>
+        {/* 1. LOGIN MODE */}
+        {authMode === "login" && (
+          <>
+            <span className="kicker">AUTHENTICATION & ACCESS</span>
+            <h2>Sign in to your campus</h2>
+            <p>Choose your workspace role to enter your dedicated portal.</p>
+            <form onSubmit={submitLogin}>
+              <div className="role-picker" aria-label="Choose account type">
+                <button
+                  className={role === "student" ? "active" : ""}
+                  type="button"
+                  onClick={() => {
+                    setRole("student")
+                    setLoginError("")
+                  }}
+                >
+                  <span>
+                    <Icon name="users" />
+                  </span>
+                  <div>
+                    <strong>Student (User)</strong>
+                    <small>Discover clans, teammates & events</small>
+                  </div>
+                </button>
+                <button
+                  className={role === "admin" ? "active" : ""}
+                  type="button"
+                  onClick={() => {
+                    setRole("admin")
+                    setLoginError("")
+                  }}
+                >
+                  <span>
+                    <Icon name="grid" />
+                  </span>
+                  <div>
+                    <strong>Campus Admin</strong>
+                    <small>Manage campus events & reports</small>
+                  </div>
+                </button>
+              </div>
+
+              <label>
+                Campus email or Username
+                <input
+                  value={loginEmail}
+                  onChange={(event) => {
+                    setLoginEmail(event.target.value)
+                    setLoginError("")
+                  }}
+                  placeholder={
+                    role === "admin" ? "admin@campus.edu or admin" : "student@campus.edu or username"
+                  }
+                  autoFocus
+                />
+              </label>
+              {loginError && <span className="field-error">{loginError}</span>}
+
+              <div className="flex items-center justify-between mt-1">
+                <label className="text-xs font-semibold text-slate-700 m-0">Password</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("forgot")
+                    setForgotEmail(loginEmail)
+                  }}
+                  className="text-xs text-amber-600 font-bold hover:underline cursor-pointer"
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="mt-1"
+              />
+
+              <button className="primary-button mt-4" type="submit">
+                Sign in as {role === "admin" ? "Campus Admin" : "Student (User)"} <Icon name="arrow" size={17} />
+              </button>
+
+              <div className="text-center pt-3 border-t border-slate-100 mt-4 text-xs font-medium text-slate-600">
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("register")
+                    setRegEmail(loginEmail)
+                  }}
+                  className="text-amber-600 font-extrabold hover:underline cursor-pointer"
+                >
+                  Register with Email OTP →
+                </button>
+              </div>
+            </form>
+
+            <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #f1f5f9", display: "grid", gap: "8px" }}>
+              <small style={{ color: "#64748b", fontWeight: 700, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.5px", fontSize: "10px" }}>
+                Quick Demo Shortcuts
+              </small>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <button
+                  type="button"
+                  className="outline-button"
+                  style={{
+                    fontSize: "11px",
+                    padding: "8px 6px",
+                    minHeight: "36px",
+                    background: role === "student" ? "#fff8db" : "white",
+                    borderColor: role === "student" ? "#f5b800" : "#e2e8f0",
+                    color: "#1e293b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
+                  onClick={() => onSubmit("student", "aarav.k@campus.edu")}
+                >
+                  <Icon name="users" size={14} /> Student Login
+                </button>
+                <button
+                  type="button"
+                  className="outline-button"
+                  style={{
+                    fontSize: "11px",
+                    padding: "8px 6px",
+                    minHeight: "36px",
+                    background: role === "admin" ? "#fff8db" : "white",
+                    borderColor: role === "admin" ? "#f5b800" : "#e2e8f0",
+                    color: "#1e293b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
+                  onClick={() => onSubmit("admin", "admin@campus.edu")}
+                >
+                  <Icon name="grid" size={14} /> Admin Login
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* 2. REGISTER MODE (EMAIL OTP VERIFICATION FLOW) */}
+        {authMode === "register" && (
+          <>
+            <span className="kicker">STUDENT REGISTRATION</span>
+            <h2>Create verified account</h2>
+            <p>Verify your official campus email via OTP to unlock clans and hackathons.</p>
+
+            <form onSubmit={submitRegister} className="space-y-3 mt-4 text-left">
+              {regError && <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">{regError}</div>}
+              {regStatusMsg && <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">{regStatusMsg}</div>}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="text-xs font-bold text-slate-700">
+                  Full Name
+                  <input
+                    value={regName}
+                    onChange={(e) => setRegName(e.target.value)}
+                    placeholder="e.g. Aarav Khanna"
+                    required
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-700">
+                  Department
+                  <input
+                    value={regDept}
+                    onChange={(e) => setRegDept(e.target.value)}
+                    placeholder="School of Engineering"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="text-xs font-bold text-slate-700">
+                  Branch / Major
+                  <input
+                    value={regBranch}
+                    onChange={(e) => setRegBranch(e.target.value)}
+                    placeholder="B.Tech CSE"
+                    required
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-700">
+                  Desired Username
+                  <input
+                    value={regUsername}
+                    onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                    placeholder="aaravkhanna"
+                    required
+                  />
+                </label>
+              </div>
+
+              {/* Email + OTP Verification Row */}
+              <div className="p-3 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-2">
+                <label className="text-xs font-black text-amber-950 uppercase tracking-wider block">
+                  1. Verify Campus Email Address
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => {
+                      setRegEmail(e.target.value)
+                      setOtpSent(false)
+                      setOtpVerified(false)
+                    }}
+                    placeholder="your.name@campus.edu"
+                    disabled={otpVerified}
+                    className="flex-1 text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={otpSending || otpVerified}
+                    className="px-3 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                  >
+                    {otpSending ? "Sending..." : otpSent ? "Resend OTP" : "Send OTP"}
+                  </button>
+                </div>
+
+                {otpSent && !otpVerified && (
+                  <div className="flex gap-2 pt-1 animate-fadeIn">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={regOtp}
+                      onChange={(e) => setRegOtp(e.target.value)}
+                      placeholder="Enter 6-digit OTP"
+                      className="flex-1 text-xs tracking-widest font-mono font-bold"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={otpVerifying}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
+                    >
+                      {otpVerifying ? "Checking..." : "Verify OTP"}
+                    </button>
+                  </div>
+                )}
+                {otpVerified && (
+                  <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 pt-0.5">
+                    ✓ Email verified and ready for account creation.
+                  </span>
+                )}
+              </div>
+
+              {/* Password Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Password (min 8 chars)
+                  <input
+                    type="password"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-700">
+                  Confirm Password
+                  <input
+                    type="password"
+                    value={regConfirmPassword}
+                    onChange={(e) => setRegConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!otpVerified}
+                className="primary-button w-full mt-3 !py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create Student Account <Icon name="arrow" size={16} />
+              </button>
+
+              <div className="text-center pt-2 text-xs font-medium text-slate-600">
+                Already registered?{" "}
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("login")}
+                  className="text-amber-600 font-extrabold hover:underline cursor-pointer"
+                >
+                  Sign in here
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+
+        {/* 3. FORGOT PASSWORD MODE */}
+        {authMode === "forgot" && (
+          <>
+            <span className="kicker">ACCOUNT RECOVERY</span>
+            <h2>Reset your password</h2>
+            <p>Enter your registered email to receive an OTP and set a new password.</p>
+
+            <form onSubmit={submitForgot} className="space-y-3 mt-4 text-left">
+              {forgotError && <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">{forgotError}</div>}
+              {forgotStatusMsg && <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">{forgotStatusMsg}</div>}
+
+              <label className="text-xs font-bold text-slate-700">
+                Registered Campus Email
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="student@campus.edu"
+                    className="flex-1 text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleForgotSendOtp}
+                    className="px-3 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
+                  >
+                    Send OTP
+                  </button>
+                </div>
+              </label>
+
+              {forgotOtpSent && (
+                <>
+                  <label className="text-xs font-bold text-slate-700">
+                    6-Digit Verification OTP
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={forgotOtp}
+                      onChange={(e) => setForgotOtp(e.target.value)}
+                      placeholder="e.g. 123456"
+                      className="mt-1 font-mono tracking-wider text-xs"
+                      required
+                    />
+                  </label>
+
+                  <label className="text-xs font-bold text-slate-700">
+                    New Password
+                    <input
+                      type="password"
+                      value={forgotPassword}
+                      onChange={(e) => setForgotPassword(e.target.value)}
+                      placeholder="Enter at least 8 characters"
+                      className="mt-1"
+                      required
+                    />
+                  </label>
+
+                  <button type="submit" className="primary-button w-full mt-3 !py-3">
+                    Reset & Sign In <Icon name="check" size={16} />
+                  </button>
+                </>
+              )}
+
+              <div className="text-center pt-2 text-xs font-medium text-slate-600">
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("login")}
+                  className="text-amber-600 font-extrabold hover:underline cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </form>
+          </>
+        )}
       </section>
     </div>
   )

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { mernApi } from "@/services/mernApi"
+import { djangoApi } from "@/services/djangoApi"
 
 export interface CommunityPost {
   id: string
@@ -133,26 +133,26 @@ export default function PostsView({
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [showCreatePost, setShowCreatePost] = useState<boolean>(false)
 
-  // Fetch live posts from MERN backend
+  // Fetch live posts from Django backend
   useEffect(() => {
     let isMounted = true
-    mernApi.posts.getAll()
+    djangoApi.posts.getClanPosts(1)
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           const mapped: CommunityPost[] = data.map((p: any) => ({
-            id: p._id || p.id,
+            id: String(p.id),
             authorName: p.authorName,
-            authorInitials: p.authorInitials || (p.authorName ? p.authorName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "CC"),
+            authorInitials: p.authorName ? p.authorName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "CC",
             authorRole: p.authorRole || "Student Member",
             clanName: p.clanName || "Campus Community",
-            timestamp: p.timestamp || "Recently",
+            timestamp: p.createdAt || "Recently",
             content: p.content,
-            imageUrl: p.imageUrl,
-            tags: p.tags || [],
+            imageUrl: p.images?.[0] || p.imageUrl,
+            tags: ["CampusClans", "Update"],
             likesCount: p.likesCount || 0,
-            isLiked: false,
-            commentsCount: p.commentsCount || (p.comments ? p.comments.length : 0),
-            sharesCount: p.sharesCount || 0,
+            isLiked: p.isLiked || false,
+            commentsCount: p.commentsCount || 0,
+            sharesCount: 0,
           }))
           setPosts(mapped)
         }
@@ -185,12 +185,13 @@ export default function PostsView({
         return p
       })
     )
-    mernApi.posts.like(postId).catch(() => {})
+    djangoApi.posts.toggleLike(postId).catch(() => {})
   }
 
   // Handle Delete Post (Only author can delete)
   const handleDeletePost = (postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId))
+    djangoApi.posts.deletePost(postId).catch(() => {})
   }
 
   // Handle Submit New Post

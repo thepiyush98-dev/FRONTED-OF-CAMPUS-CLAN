@@ -1,4 +1,6 @@
 import React, { useState } from "react"
+import { djangoApi } from "@/services/djangoApi"
+import { ProjectItem } from "@/types"
 
 export interface SocialLinks {
   instagram: string
@@ -33,6 +35,38 @@ export interface SkillItem {
   category: "Frontend" | "Backend" | "Design" | "Tools & DevOps"
   isTopDisplayed: boolean
 }
+
+const INITIAL_PERSONAL_PROJECTS: ProjectItem[] = [
+  {
+    id: "sp-1",
+    title: "DevMatch - Peer Mentorship Network",
+    description: "An intelligent student pairing platform matching senior engineers with 1st-year developers based on programming interests and hackathon tracks.",
+    coverImage: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80",
+    status: "in_progress",
+    isClanProject: false,
+    ownerName: "Aarav Khanna",
+    githubLink: "https://github.com/aaravkhanna/devmatch",
+    liveLink: "https://devmatch.campusclans.edu",
+    updates: [
+      { id: "spu-1", title: "Version 1.0 Release", content: "Shipped core pairing algorithm and interactive mentor cards.", createdAt: "3 days ago" },
+    ],
+    createdAt: "October 2026",
+  },
+  {
+    id: "sp-2",
+    title: "KaTeX Math Equation Playground",
+    description: "Real-time LaTeX formula renderer and live math editor built with React and Tailwind CSS v4.",
+    coverImage: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=800&q=80",
+    status: "completed",
+    isClanProject: false,
+    ownerName: "Aarav Khanna",
+    githubLink: "https://github.com/aaravkhanna/katex-playground",
+    updates: [
+      { id: "spu-2", title: "Passed Full Unit Tests", content: "Benchmarked rendering speed across 200 simultaneous complex KaTeX formulas.", createdAt: "Last week" },
+    ],
+    createdAt: "September 2026",
+  },
+]
 
 export interface PostItem {
   id: string
@@ -178,6 +212,85 @@ export default function Profile({ onOpenClan }: ProfileProps = {}) {
   const [newPostContent, setNewPostContent] = useState("")
   const [newPostTags, setNewPostTags] = useState("")
   const [newPostImageUrl, setNewPostImageUrl] = useState("")
+
+  // Personal Projects State (from Django backend: StudentProject & StudentProjectUpdate)
+  const [personalProjects, setPersonalProjects] = useState<ProjectItem[]>(INITIAL_PERSONAL_PROJECTS)
+  const [showAddProject, setShowAddProject] = useState(false)
+  const [newProjTitle, setNewProjTitle] = useState("")
+  const [newProjDesc, setNewProjDesc] = useState("")
+  const [newProjGithub, setNewProjGithub] = useState("")
+  const [newProjLive, setNewProjLive] = useState("")
+
+  const [showAddProjectUpdate, setShowAddProjectUpdate] = useState<string | null>(null)
+  const [newUpdateTitle, setNewUpdateTitle] = useState("")
+  const [newUpdateContent, setNewUpdateContent] = useState("")
+
+  // Student Clan Seeking State (from Django backend: StudentClanRecruitment)
+  const [isOpenForRecruitment, setIsOpenForRecruitment] = useState(true)
+
+  const handleCreatePersonalProject = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newProjTitle.trim()) return
+    const newProj: ProjectItem = {
+      id: `sp-${Date.now()}`,
+      title: newProjTitle.trim(),
+      description: newProjDesc.trim(),
+      coverImage: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80",
+      status: "in_progress",
+      isClanProject: false,
+      ownerName: profile.name,
+      githubLink: newProjGithub.trim() || undefined,
+      liveLink: newProjLive.trim() || undefined,
+      updates: [{ id: `spu-${Date.now()}`, title: "Project Initialized", content: "Architecture draft and repo established.", createdAt: "Just now" }],
+      createdAt: "October 2026",
+    }
+    setPersonalProjects([newProj, ...personalProjects])
+    djangoApi.projects.createPersonalProject(newProj).catch(() => {})
+    setShowAddProject(false)
+    setNewProjTitle("")
+    setNewProjDesc("")
+    setNewProjGithub("")
+    setNewProjLive("")
+  }
+
+  const handleAddPersonalProjectUpdate = (projectId: string) => {
+    if (!newUpdateTitle.trim() || !newUpdateContent.trim()) return
+    setPersonalProjects((prev) =>
+      prev.map((p) => {
+        if (p.id === projectId) {
+          return {
+            ...p,
+            updates: [
+              {
+                id: `spu-${Date.now()}`,
+                title: newUpdateTitle.trim(),
+                content: newUpdateContent.trim(),
+                createdAt: "Just now",
+              },
+              ...p.updates,
+            ],
+          }
+        }
+        return p
+      })
+    )
+    djangoApi.projects.addPersonalProjectUpdate(projectId, { title: newUpdateTitle, content: newUpdateContent }).catch(() => {})
+    setShowAddProjectUpdate(null)
+    setNewUpdateTitle("")
+    setNewUpdateContent("")
+  }
+
+  const handleCompletePersonalProject = (projectId: string | number) => {
+    setPersonalProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, status: "completed" } : p))
+    )
+    djangoApi.projects.completePersonalProject(projectId).catch(() => {})
+  }
+
+  const handleDeletePersonalProject = (projectId: string | number) => {
+    setPersonalProjects((prev) => prev.filter((p) => p.id !== projectId))
+    djangoApi.projects.deletePersonalProject(projectId).catch(() => {})
+  }
 
   // Calculate Word Count for About Me
   const countWords = (text: string) => {
@@ -775,7 +888,295 @@ export default function Profile({ onOpenClan }: ProfileProps = {}) {
 
       {/* 
         ================================================================
-        3. USER'S OWN POSTS SECTION
+        3. CLAN RECRUITMENT STATUS & AVAILABILITY
+        (From Django Backend: StudentClanRecruitment model)
+        ================================================================
+      */}
+      <section className="rounded-3xl bg-gradient-to-r from-slate-900 via-[#172033] to-slate-900 border border-slate-800 p-6 sm:p-8 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="space-y-2 max-w-xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Open for Clan Recruitments & Hackathon Teams</span>
+          </div>
+          <h2 className="text-xl font-black text-white font-heading">
+            Student Availability & Seeking Profile
+          </h2>
+          <p className="text-xs text-slate-300 font-medium leading-relaxed">
+            Other campus clan leaders can view your portfolio, send clan invitations, or request to recruit you for upcoming competitive hackathons.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const nextState = !isOpenForRecruitment
+              setIsOpenForRecruitment(nextState)
+              djangoApi.recruitments.createStudentRecruitment({ bio: profile.aboutMe }).catch(() => {})
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+              isOpenForRecruitment
+                ? "bg-emerald-500 text-white border-emerald-400 shadow-md"
+                : "bg-white/10 text-slate-300 border-white/20"
+            }`}
+          >
+            {isOpenForRecruitment ? "✓ Open for Recruits" : "Paused"}
+          </button>
+        </div>
+      </section>
+
+      {/* 
+        ================================================================
+        4. STUDENT PERSONAL PROJECTS & UPDATES
+        (From Django Backend: StudentProject & StudentProjectUpdate models)
+        ================================================================
+      */}
+      <section className="rounded-3xl bg-white border border-slate-200/90 shadow-xl p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-black uppercase tracking-widest text-amber-600">
+                Personal Engineering Portfolio
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-extrabold border border-amber-200">
+                {personalProjects.length} Projects
+              </span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight font-heading mt-0.5">
+              Personal Projects
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">
+              Independent builds, research prototypes, and open-source tooling created by you.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAddProject(true)}
+            style={{ backgroundColor: "#f5b800", color: "#0f172a" }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs shadow-md hover:brightness-105 active:scale-95 cursor-pointer border border-amber-400 transition-all"
+          >
+            <span>+ Add Personal Project</span>
+          </button>
+        </div>
+
+        {/* Projects Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {personalProjects.map((proj) => (
+            <article
+              key={proj.id}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-all space-y-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span
+                    className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mb-1.5 ${
+                      proj.status === "completed"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-amber-100 text-amber-900"
+                    }`}
+                  >
+                    {proj.status === "completed" ? "✓ Completed" : "⚡ In Progress"}
+                  </span>
+                  <h3 className="text-base font-black text-slate-900 leading-snug">{proj.title}</h3>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {proj.status !== "completed" && (
+                    <button
+                      type="button"
+                      onClick={() => handleCompletePersonalProject(proj.id)}
+                      className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 cursor-pointer"
+                    >
+                      Mark Complete
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePersonalProject(proj.id)}
+                    className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                    title="Delete Project"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed font-normal">{proj.description}</p>
+
+              {/* Milestone Updates Timeline */}
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <strong className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Milestone Updates ({proj.updates.length})
+                  </strong>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProjectUpdate(String(proj.id))}
+                    className="text-xs text-amber-600 font-bold hover:underline cursor-pointer"
+                  >
+                    + Add Update
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {proj.updates.map((up) => (
+                    <div key={up.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+                      <div className="flex items-center justify-between font-bold text-slate-900 mb-0.5">
+                        <span>{up.title}</span>
+                        <small className="text-slate-400 font-normal">{up.createdAt}</small>
+                      </div>
+                      <p className="text-slate-600 text-[11px]">{up.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between text-xs border-t border-slate-100">
+                {proj.githubLink ? (
+                  <a
+                    href={proj.githubLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-amber-600 font-bold hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>GitHub Code</span> ↗
+                  </a>
+                ) : (
+                  <span className="text-slate-400">Private repository</span>
+                )}
+                {proj.liveLink && (
+                  <a
+                    href={proj.liveLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Live Demo</span> ↗
+                  </a>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* 
+        ================================================================
+        MODAL: ADD PERSONAL PROJECT
+        ================================================================
+      */}
+      {showAddProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900">Add Personal Project</h3>
+              <button type="button" onClick={() => setShowAddProject(false)} className="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+            </div>
+            <form onSubmit={handleCreatePersonalProject} className="space-y-3">
+              <label className="text-xs font-bold text-slate-700 block">
+                Project Title
+                <input
+                  type="text"
+                  value={newProjTitle}
+                  onChange={(e) => setNewProjTitle(e.target.value)}
+                  placeholder="e.g. Distributed Task Queue"
+                  className="w-full mt-1 p-2 text-xs rounded-xl border border-slate-200"
+                  required
+                />
+              </label>
+              <label className="text-xs font-bold text-slate-700 block">
+                Description
+                <textarea
+                  rows={3}
+                  value={newProjDesc}
+                  onChange={(e) => setNewProjDesc(e.target.value)}
+                  placeholder="Goals, architecture, libraries used..."
+                  className="w-full mt-1 p-2.5 text-xs rounded-xl border border-slate-200"
+                  required
+                />
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="text-xs font-bold text-slate-700 block">
+                  GitHub URL
+                  <input
+                    type="url"
+                    value={newProjGithub}
+                    onChange={(e) => setNewProjGithub(e.target.value)}
+                    placeholder="https://github.com/..."
+                    className="w-full mt-1 p-2 text-xs rounded-xl border border-slate-200"
+                  />
+                </label>
+                <label className="text-xs font-bold text-slate-700 block">
+                  Live Demo URL
+                  <input
+                    type="url"
+                    value={newProjLive}
+                    onChange={(e) => setNewProjLive(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full mt-1 p-2 text-xs rounded-xl border border-slate-200"
+                  />
+                </label>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowAddProject(false)} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100">Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded-xl text-xs font-black bg-amber-400 text-slate-950 shadow-sm">Save Project</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 
+        ================================================================
+        MODAL: ADD PERSONAL PROJECT UPDATE
+        ================================================================
+      */}
+      {showAddProjectUpdate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900">Post Milestone Update</h3>
+              <button type="button" onClick={() => setShowAddProjectUpdate(null)} className="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+            </div>
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-slate-700 block">
+                Update Title
+                <input
+                  type="text"
+                  value={newUpdateTitle}
+                  onChange={(e) => setNewUpdateTitle(e.target.value)}
+                  placeholder="e.g. Added JWT Authentication"
+                  className="w-full mt-1 p-2 text-xs rounded-xl border border-slate-200"
+                />
+              </label>
+              <label className="text-xs font-bold text-slate-700 block">
+                Update Content
+                <textarea
+                  rows={3}
+                  value={newUpdateContent}
+                  onChange={(e) => setNewUpdateContent(e.target.value)}
+                  placeholder="Detail what changes were tested and deployed..."
+                  className="w-full mt-1 p-2.5 text-xs rounded-xl border border-slate-200"
+                />
+              </label>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowAddProjectUpdate(null)} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100">Cancel</button>
+                <button
+                  type="button"
+                  onClick={() => handleAddPersonalProjectUpdate(showAddProjectUpdate)}
+                  className="px-4 py-2 rounded-xl text-xs font-black bg-amber-400 text-slate-950 shadow-sm"
+                >
+                  Post Milestone
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 
+        ================================================================
+        5. USER'S OWN POSTS SECTION
         - Displays ONLY the current user's posts
         - NO likes displayed at the top
         - Top right has clearly legible, high-contrast "+ Create Post" button

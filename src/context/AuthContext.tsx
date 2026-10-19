@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { mernApi } from "@/services/mernApi"
+import { djangoApi } from "@/services/djangoApi"
 
 export type UserRole = "student" | "admin"
 
@@ -19,8 +19,19 @@ interface AuthContextType {
   role: UserRole | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, role: UserRole, password?: string) => Promise<boolean>
+  login: (usernameOrEmail: string, role: UserRole, password?: string) => Promise<boolean>
   register: (name: string, email: string, role: UserRole, password?: string) => Promise<boolean>
+  sendOtp: (email: string) => Promise<{ success: boolean; message?: string; error?: string }>
+  verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>
+  registerStudent: (data: {
+    name: string
+    department: string
+    branch: string
+    email: string
+    username: string
+    password: string
+    confirm_password: string
+  }) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   setUser: React.Dispatch<React.SetStateAction<AuthUser | null>>
 }
@@ -52,19 +63,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = async (email: string, role: UserRole, password = "••••••••"): Promise<boolean> => {
+  const login = async (usernameOrEmail: string, role: UserRole, password = "••••••••"): Promise<boolean> => {
     setIsLoading(true)
     try {
-      const res = await mernApi.auth.login(email, password, role)
-      if (res && res.token && res.user) {
-        setToken(res.token)
-        setUser(res.user)
-        localStorage.setItem(TOKEN_KEY, res.token)
-        localStorage.setItem(USER_KEY, JSON.stringify(res.user))
+      const res = await djangoApi.auth.login(usernameOrEmail, password)
+      if (res && res.success) {
+        const detectedRole: UserRole = res.role || role
+        const authUser: AuthUser = {
+          id: detectedRole === "admin" ? "admin-1" : "stu-1",
+          name: detectedRole === "admin" ? "Maya Kapoor" : usernameOrEmail.split("@")[0].replace(".", " "),
+          email: usernameOrEmail.includes("@") ? usernameOrEmail : `${usernameOrEmail}@campus.edu`,
+          role: detectedRole,
+          avatar: detectedRole === "admin" ? "MK" : "AK",
+          clanName: detectedRole === "admin" ? undefined : "Pixel Pirates",
+          skills: detectedRole === "admin" ? ["Administration", "Governance"] : ["React", "Tailwind", "Python"],
+        }
+        const sessionToken = `django_session_${Date.now()}`
+        setToken(sessionToken)
+        setUser(authUser)
+        localStorage.setItem(TOKEN_KEY, sessionToken)
+        localStorage.setItem(USER_KEY, JSON.stringify(authUser))
         return true
       }
     } catch (err) {
-      console.warn("[Auth] MERN Backend offline, using local simulated login:", err)
+      console.warn("[Auth] Django backend offline, using simulated local session:", err)
     } finally {
       setIsLoading(false)
     }
@@ -73,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const fallbackUser: AuthUser = {
       id: role === "admin" ? "admin-1" : "stu-1",
       name: role === "admin" ? "Maya Kapoor" : "Aarav Khanna",
-      email: email.trim() || (role === "admin" ? "admin@campus.edu" : "aarav.k@campus.edu"),
+      email: usernameOrEmail.trim() || (role === "admin" ? "admin@campus.edu" : "aarav.k@campus.edu"),
       role,
       avatar: role === "admin" ? "MK" : "AK",
       clanName: role === "admin" ? undefined : "Pixel Pirates",
@@ -88,41 +110,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true
   }
 
-  const register = async (name: string, email: string, role: UserRole, password = "••••••••"): Promise<boolean> => {
+  const sendOtp = async (email: string) => {
+    return await djangoApi.auth.sendOtp(email)
+  }
+
+  const verifyOtp = async (email: string, otp: string) => {
+    return await djangoApi.auth.verifyOtp(email, otp)
+  }
+
+  const registerStudent = async (data: {
+    name: string
+    department: string
+    branch: string
+    email: string
+    username: string
+    password: string
+    confirm_password: string
+  }) => {
     setIsLoading(true)
     try {
-      const res = await mernApi.auth.register(name, email, password, role)
-      if (res && res.token && res.user) {
-        setToken(res.token)
-        setUser(res.user)
-        localStorage.setItem(TOKEN_KEY, res.token)
-        localStorage.setItem(USER_KEY, JSON.stringify(res.user))
-        return true
+      const res = await djangoApi.auth.registerStudent(data)
+      if (res && res.success) {
+        const newUser: AuthUser = {
+          id: `stu-${Date.now()}`,
+          name: data.name,
+          email: data.email,
+          role: "student",
+          avatar: data.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2),
+          clanName: "Pixel Pirates",
+          skills: ["React", "Tailwind CSS"],
+        }
+        const sessionToken = `django_session_${Date.now()}`
+        setToken(sessionToken)
+        setUser(newUser)
+        localStorage.setItem(TOKEN_KEY, sessionToken)
+        localStorage.setItem(USER_KEY, JSON.stringify(newUser))
+        return { success: true }
       }
-    } catch (err) {
-      console.warn("[Auth] MERN Backend offline, using local simulated register:", err)
+      return { success: false, error: res?.error || "Registration failed" }
+    } catch (err: any) {
+      return { success: false, error: err.message || "Failed to connect to backend" }
     } finally {
       setIsLoading(false)
     }
+  }
 
-    const fallbackUser: AuthUser = {
-      id: `user-${Date.now()}`,
+  const register = async (name: string, email: string, role: UserRole, password = "••••••••"): Promise<boolean> => {
+    return (await registerStudent({
       name,
+      department: "School of Engineering",
+      branch: "CSE",
       email,
-      role,
-      avatar: name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2),
-      clanName: role === "student" ? "Pixel Pirates" : undefined,
-    }
-    const simulatedToken = `jwt_sim_${Date.now()}_${role}`
-
-    setToken(simulatedToken)
-    setUser(fallbackUser)
-    localStorage.setItem(TOKEN_KEY, simulatedToken)
-    localStorage.setItem(USER_KEY, JSON.stringify(fallbackUser))
-    return true
+      username: email.split("@")[0],
+      password,
+      confirm_password: password,
+    })).success
   }
 
   const logout = () => {
+    djangoApi.auth.logout().catch(() => {})
     setUser(null)
     setToken(null)
     localStorage.removeItem(TOKEN_KEY)
@@ -139,6 +185,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         register,
+        sendOtp,
+        verifyOtp,
+        registerStudent,
         logout,
         setUser,
       }}

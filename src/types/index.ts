@@ -194,3 +194,114 @@ export interface MonthlyReportSummary {
   upcomingEvents: number
   monthlyClanApplications: number
 }
+
+// ==========================================
+// DJANGO BACKEND MODELS & DATA CONTRACTS
+// ==========================================
+
+export interface ClanStoryItem {
+  id: string | number
+  clanId: string | number
+  clanName: string
+  clanLogo?: string
+  mediaUrl: string
+  mediaType: "image" | "video"
+  caption: string
+  viewsCount: number
+  likesCount: number
+  isLiked: boolean
+  createdAt: string
+  expiresAt?: string
+}
+
+export interface ClanPostItem {
+  id: string | number
+  clanId: string | number
+  clanName: string
+  authorId: string | number
+  authorName: string
+  authorAvatar?: string
+  authorRole: string
+  content: string
+  images: string[]
+  videoUrl?: string
+  likesCount: number
+  isLiked: boolean
+  commentsCount: number
+  createdAt: string
+}
+
+export interface ProjectUpdateItem {
+  id: string | number
+  title: string
+  content: string
+  createdAt: string
+  participants?: string[]
+}
+
+export interface ProjectItem {
+  id: string | number
+  title: string
+  description: string
+  coverImage?: string
+  status: "in_progress" | "completed"
+  isClanProject: boolean
+  clanId?: string | number
+  clanName?: string
+  ownerId?: string | number
+  ownerName?: string
+  githubLink?: string
+  liveLink?: string
+  assignedMembers?: string[]
+  updates: ProjectUpdateItem[]
+  createdAt: string
+}
+
+export interface ClanRecruitmentItem {
+  id: string | number
+  clanId: string | number
+  clanName: string
+  clanInitials?: string
+  title: string
+  description: string
+  requiredSkills: string[]
+  deadline?: string
+  applicantsCount: number
+  status: "open" | "closed"
+  createdAt: string
+}
+
+export interface StudentRecruitmentItem {
+  id: string | number
+  studentId: string | number
+  studentName: string
+  studentAvatar?: string
+  department: string
+  branch: string
+  year: string
+  skills: string[]
+  bio: string
+  portfolioUrl?: string
+  createdAt: string
+}
+
+export interface ClanInvitationItem {
+  id: string | number
+  clanId: string | number
+  clanName: string
+  studentId: string | number
+  studentName: string
+  role: string
+  status: "pending" | "accepted" | "rejected" | "cancelled"
+  createdAt: string
+}
+
+export interface ClanJoinRequestItem {
+  id: string | number
+  clanId: string | number
+  clanName: string
+  studentId: string | number
+  studentName: string
+  status: "pending" | "accepted" | "rejected" | "cancelled"
+  createdAt: string
+}
