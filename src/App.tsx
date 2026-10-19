@@ -988,14 +988,14 @@ function LoginModal({
   }
 
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
+    <div className="modal-backdrop backdrop-blur-md bg-slate-950/60" onMouseDown={onClose}>
       <section
-        className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col md:flex-row border border-slate-200/80 my-auto animate-modal-up"
+        className="relative w-full max-w-3xl bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.3)] overflow-hidden max-h-[92vh] flex flex-col md:flex-row border border-white/60 my-auto animate-modal-up"
         onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Floating Close Button */}
         <button
-          className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+          className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-slate-100/80 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all cursor-pointer shadow-xs backdrop-blur-sm"
           type="button"
           onClick={onClose}
           aria-label="Close"
@@ -1003,16 +1003,16 @@ function LoginModal({
           <Icon name="close" size={16} />
         </button>
 
-        {/* LEFT COLUMN: BRANDING & INSTAGRAM-STYLE SHOWCASE (Visible on Tablet & PC) */}
-        <div className="hidden md:flex md:w-5/12 bg-gradient-to-br from-[#0c121e] via-[#162135] to-[#0c121e] p-8 lg:p-10 flex-col justify-between text-white relative overflow-hidden border-r border-slate-800 shrink-0">
+        {/* LEFT COLUMN: MINIMAL BRANDING PANEL (WITHOUT EXTRA CARDS) */}
+        <div className="hidden md:flex md:w-5/12 bg-gradient-to-br from-[#0c121e]/95 via-[#141d2e]/95 to-[#0c121e]/95 backdrop-blur-xl p-8 lg:p-10 flex-col justify-between text-white relative overflow-hidden border-r border-white/10 shrink-0">
           {/* Subtle Ambient Glow */}
-          <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-amber-500/15 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+          <div className="absolute -top-20 -left-20 w-60 h-60 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -right-20 w-60 h-60 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
 
-          {/* Top Logo & Branding Header */}
-          <div className="relative z-10 space-y-4">
+          {/* Logo & Branding */}
+          <div className="relative z-10 space-y-4 my-auto">
             <div className="flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg -rotate-3 border border-amber-300">
+              <span className="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 font-black text-xl flex items-center justify-center shadow-lg -rotate-3 border border-amber-300">
                 CC
               </span>
               <div>
@@ -1025,47 +1025,20 @@ function LoginModal({
               </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed font-medium pt-1">
-              Your all-in-one student network. Join elite campus clans, build real-world products, and win hackathons.
+            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+              Discover what&apos;s happening next in your campus network. Join student clans, build real-world products, and win hackathons.
             </p>
           </div>
 
-          {/* Center Visual Cards Mockup (Instagram-style showcase) */}
-          <div className="relative z-10 space-y-2.5 py-4">
-            <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-sm space-y-1 transform hover:-translate-y-0.5 transition-transform">
-              <div className="flex items-center justify-between text-[11px] font-bold">
-                <span className="flex items-center gap-1.5 text-amber-300">
-                  <span>🛡️</span> Pixel Pirates
-                </span>
-                <span className="text-[9px] text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full font-black">
-                  ACTIVE CLAN
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-300">24 Developers & UI designers building campus apps.</p>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-sm space-y-1 transform hover:-translate-y-0.5 transition-transform">
-              <div className="flex items-center justify-between text-[11px] font-bold">
-                <span className="flex items-center gap-1.5 text-amber-300">
-                  <span>🏆</span> North India Hackfest
-                </span>
-                <span className="text-[9px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full font-black">
-                  36-HR SPRINT
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-300">248 student attendees · ₹50,000 prize pool</p>
-            </div>
-          </div>
-
-          {/* Bottom Kicker */}
-          <div className="relative z-10 pt-4 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400 font-semibold">
+          {/* Minimal Bottom Tagline */}
+          <div className="relative z-10 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400 font-medium">
             <span>Find your people. Build your thing.</span>
             <span className="text-amber-400 font-bold">© 2026</span>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: INTERACTIVE FORM (Sign In / Register / Forgot Password) */}
-        <div className="w-full md:w-7/12 p-6 sm:p-8 lg:p-10 overflow-y-auto flex flex-col justify-between space-y-4 max-h-[92vh]">
+        {/* RIGHT COLUMN: GLASSY MINIMAL FORM CONTAINER */}
+        <div className="w-full md:w-7/12 p-6 sm:p-8 lg:p-10 overflow-y-auto flex flex-col justify-between space-y-4 max-h-[92vh] bg-white/70 backdrop-blur-md">
           {/* Mobile Logo (Visible only on small phone screens) */}
           <div className="md:hidden flex items-center gap-2.5 pb-2 border-b border-slate-100">
             <span className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center shadow">
@@ -1076,34 +1049,28 @@ function LoginModal({
             </strong>
           </div>
 
-          {/* ⚡ QUICK DEMO PANEL ("aur abhi ki liye quick pannel to rakhna") */}
-          <div className="p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-left space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black tracking-wider text-amber-950 uppercase flex items-center gap-1.5">
-                <span>⚡</span> Quick Demo Testing (1-Click)
-              </span>
-              <span className="text-[9px] text-amber-800 font-extrabold bg-amber-200/80 px-2 py-0.5 rounded-full">
-                Instant Login
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
+          {/* ⚡ MINIMAL QUICK DEMO TEST BAR */}
+          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-amber-500/10 border border-amber-400/25 backdrop-blur-sm">
+            <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1.5 pl-1 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span>Quick Demo:</span>
+            </span>
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => onSubmit("student", "aarav.k@campus.edu")}
-                className="py-2 px-3 rounded-xl bg-white hover:bg-slate-900 hover:text-white border border-amber-300 font-bold text-xs text-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-                title="Instant Login as Student (Aarav Khanna - User)"
+                className="px-2.5 py-1 rounded-lg bg-white/90 hover:bg-slate-900 hover:text-white border border-amber-300 font-bold text-[11px] text-slate-800 transition-all cursor-pointer shadow-xs active:scale-95"
+                title="Login as Student (Aarav Khanna - User)"
               >
-                <Icon name="users" size={13} />
-                <span>Student (User)</span>
+                🎓 Student
               </button>
               <button
                 type="button"
                 onClick={() => onSubmit("admin", "admin@campus.edu")}
-                className="py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-500 border border-amber-500 font-black text-xs text-slate-950 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-                title="Instant Login as Campus Admin (Maya Kapoor - Admin)"
+                className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 border border-amber-500 font-black text-[11px] text-slate-950 transition-all cursor-pointer shadow-xs active:scale-95"
+                title="Login as Campus Admin (Maya Kapoor - Admin)"
               >
-                <Icon name="grid" size={13} />
-                <span>Campus Admin</span>
+                🛡️ Admin
               </button>
             </div>
           </div>
@@ -1116,7 +1083,7 @@ function LoginModal({
                   Authentication & Access
                 </span>
                 <h2 className="text-2xl font-black tracking-tight text-slate-900 font-heading">
-                  Sign in to your account
+                  Sign In
                 </h2>
                 <p className="text-xs text-slate-500 font-medium">
                   Enter your campus username or college email to continue.
@@ -1146,9 +1113,6 @@ function LoginModal({
                     autoFocus
                     required
                   />
-                  <small className="text-[10px] text-slate-400 font-medium block">
-                    Tip: Entering your admin ID opens the Admin Console automatically.
-                  </small>
                 </div>
 
                 {/* Password Input with Forgot Password link right underneath */}
@@ -1188,7 +1152,7 @@ function LoginModal({
               </form>
 
               {/* Instagram-style Bottom Switcher Box */}
-              <div className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 text-center text-xs text-slate-600 font-medium">
+              <div className="p-4 rounded-2xl border border-slate-200/90 bg-white/80 backdrop-blur-sm text-center text-xs text-slate-600 font-medium">
                 Don&apos;t have an account?{" "}
                 <button
                   type="button"
