@@ -19,7 +19,7 @@ interface AuthContextType {
   role: UserRole | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (usernameOrEmail: string, role: UserRole, password?: string) => Promise<boolean>
+  login: (usernameOrEmail: string, role?: UserRole, password?: string) => Promise<boolean>
   register: (name: string, email: string, role: UserRole, password?: string) => Promise<boolean>
   sendOtp: (email: string) => Promise<{ success: boolean; message?: string; error?: string }>
   verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>
@@ -63,12 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = async (usernameOrEmail: string, role: UserRole, password = "••••••••"): Promise<boolean> => {
+  const login = async (usernameOrEmail: string, role?: UserRole, password = "••••••••"): Promise<boolean> => {
     setIsLoading(true)
+    const isAdmin = usernameOrEmail.toLowerCase().includes("admin") || role === "admin"
+    const targetRole: UserRole = role || (isAdmin ? "admin" : "student")
     try {
       const res = await djangoApi.auth.login(usernameOrEmail, password)
       if (res && res.success) {
-        const detectedRole: UserRole = res.role || role
+        const detectedRole: UserRole = res.role || targetRole
         const authUser: AuthUser = {
           id: detectedRole === "admin" ? "admin-1" : "stu-1",
           name: detectedRole === "admin" ? "Maya Kapoor" : usernameOrEmail.split("@")[0].replace(".", " "),
@@ -93,15 +95,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Offline / Mock Fallback
     const fallbackUser: AuthUser = {
-      id: role === "admin" ? "admin-1" : "stu-1",
-      name: role === "admin" ? "Maya Kapoor" : "Aarav Khanna",
-      email: usernameOrEmail.trim() || (role === "admin" ? "admin@campus.edu" : "aarav.k@campus.edu"),
-      role,
-      avatar: role === "admin" ? "MK" : "AK",
-      clanName: role === "admin" ? undefined : "Pixel Pirates",
-      skills: role === "admin" ? ["Administration", "Audit", "Governance"] : ["React", "UI/UX", "Tailwind", "Figma"],
+      id: targetRole === "admin" ? "admin-1" : "stu-1",
+      name: targetRole === "admin" ? "Maya Kapoor" : (usernameOrEmail.includes("@") ? usernameOrEmail.split("@")[0].replace(".", " ") : (usernameOrEmail || "Aarav Khanna")),
+      email: usernameOrEmail.trim() || (targetRole === "admin" ? "admin@campus.edu" : "aarav.k@campus.edu"),
+      role: targetRole,
+      avatar: targetRole === "admin" ? "MK" : "AK",
+      clanName: targetRole === "admin" ? undefined : "Pixel Pirates",
+      skills: targetRole === "admin" ? ["Administration", "Audit", "Governance"] : ["React", "UI/UX", "Tailwind", "Figma"],
     }
-    const simulatedToken = `jwt_sim_${Date.now()}_${role}`
+    const simulatedToken = `jwt_sim_${Date.now()}_${targetRole}`
 
     setToken(simulatedToken)
     setUser(fallbackUser)

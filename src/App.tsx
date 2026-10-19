@@ -695,7 +695,6 @@ function PublicEvents({ onLogin }: { onLogin: () => void }) {
 function LoginModal({
   onClose,
   onSubmit,
-  initialRole = "student",
 }: {
   onClose: () => void
   onSubmit: (role: UserRole, email?: string) => void
@@ -703,7 +702,6 @@ function LoginModal({
 }) {
   const { sendOtp, verifyOtp, registerStudent } = useAuth()
   const [authMode, setAuthMode] = useState<"login" | "register" | "forgot">("login")
-  const [role, setRole] = useState<UserRole>(initialRole)
   
   // Login State
   const [loginEmail, setLoginEmail] = useState("")
@@ -747,7 +745,7 @@ function LoginModal({
       return
     }
 
-    setUsernameCheck({ checking: true, available: null, message: "Checking username availability..." })
+    setUsernameCheck({ checking: true, available: null, message: "Checking availability..." })
     const timer = setTimeout(async () => {
       try {
         const res = await djangoApi.auth.checkUsername(trimmed)
@@ -761,7 +759,7 @@ function LoginModal({
           setUsernameCheck({
             checking: false,
             available: false,
-            message: `✗ @${trimmed} is already taken. Try another username.`,
+            message: `✗ @${trimmed} is taken. Try another.`,
           })
         }
       } catch {
@@ -786,17 +784,23 @@ function LoginModal({
   const [forgotError, setForgotError] = useState("")
 
   // Handle Login Submit (/login/)
+  // Auto-detects admin vs student role automatically based on credentials!
   async function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoginError("")
-    const targetEmail = loginEmail.trim() || (role === "admin" ? "admin@campus.edu" : "student@campus.edu")
-    if (loginEmail.trim() && !loginEmail.includes("@") && loginEmail.length < 3) {
-      setLoginError("Please enter a valid campus username or college email.")
+    const inputVal = loginEmail.trim()
+    if (!inputVal) {
+      setLoginError("Please enter your campus username or email.")
       return
     }
+
     setLoginLoading(true)
     try {
-      await onSubmit(role, targetEmail)
+      // Auto-detect: if username/email contains "admin", log in directly as admin!
+      const detectedRole: UserRole = inputVal.toLowerCase().includes("admin") ? "admin" : "student"
+      await onSubmit(detectedRole, inputVal)
+    } catch (e: any) {
+      setLoginError(e.message || "Failed to sign in. Please verify your credentials.")
     } finally {
       setLoginLoading(false)
     }
@@ -986,509 +990,566 @@ function LoginModal({
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <section
-        className="login-modal max-w-lg w-full max-h-[92vh] overflow-y-auto"
+        className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col md:flex-row border border-slate-200/80 my-auto animate-modal-up"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        {/* Floating Close Button */}
         <button
-          className="icon-button modal-close"
+          className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
           type="button"
           onClick={onClose}
           aria-label="Close"
         >
-          <Icon name="close" />
+          <Icon name="close" size={16} />
         </button>
-        <Logo />
 
-        {/* 1. TOP MODE SWITCHER TABS */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl my-4">
-          <button
-            type="button"
-            onClick={() => {
-              setAuthMode("login")
-              setLoginError("")
-            }}
-            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
-              authMode === "login"
-                ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            🔑 Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setAuthMode("register")
-              setRegError("")
-            }}
-            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
-              authMode === "register"
-                ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            📝 Student Register (OTP)
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setAuthMode("forgot")
-              setForgotError("")
-            }}
-            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
-              authMode === "forgot"
-                ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            🔄 Reset Password
-          </button>
-        </div>
+        {/* LEFT COLUMN: BRANDING & INSTAGRAM-STYLE SHOWCASE (Visible on Tablet & PC) */}
+        <div className="hidden md:flex md:w-5/12 bg-gradient-to-br from-[#0c121e] via-[#162135] to-[#0c121e] p-8 lg:p-10 flex-col justify-between text-white relative overflow-hidden border-r border-slate-800 shrink-0">
+          {/* Subtle Ambient Glow */}
+          <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-amber-500/15 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
 
-        {/* 2. PROMINENT 1-CLICK QUICK DEMO SHORTCUT CARD (CHECK ADMIN & USER) */}
-        <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 space-y-2 mb-4 text-left">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black tracking-wider text-amber-950 uppercase flex items-center gap-1.5">
-              <span>⚡</span> Quick Demo Testing (1-Click)
-            </span>
-            <span className="text-[10px] text-amber-800 font-extrabold bg-amber-200/70 px-2 py-0.5 rounded-full">
-              Instant Access
-            </span>
+          {/* Top Logo & Branding Header */}
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg -rotate-3 border border-amber-300">
+                CC
+              </span>
+              <div>
+                <strong className="text-xl font-black tracking-tight block text-white font-heading">
+                  CAMPUS CLANS
+                </strong>
+                <small className="text-[10px] text-amber-400 font-extrabold uppercase tracking-widest block">
+                  Connect · Collaborate · Grow
+                </small>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed font-medium pt-1">
+              Your all-in-one student network. Join elite campus clans, build real-world products, and win hackathons.
+            </p>
           </div>
-          <p className="text-[11px] text-amber-900/80 leading-snug">
-            Directly test both personas with real-time preloaded data:
-          </p>
-          <div className="grid grid-cols-2 gap-2 pt-0.5">
-            <button
-              type="button"
-              onClick={() => onSubmit("student", "aarav.k@campus.edu")}
-              className="py-2.5 px-3 rounded-xl bg-white hover:bg-slate-900 hover:text-white border border-amber-300 font-bold text-xs text-slate-800 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
-              title="Test Student (User) Dashboard"
-            >
-              <Icon name="users" size={14} />
-              <span>Student (User)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onSubmit("admin", "admin@campus.edu")}
-              className="py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-500 border border-amber-500 font-black text-xs text-slate-950 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
-              title="Test Campus Admin Console"
-            >
-              <Icon name="grid" size={14} />
-              <span>Campus Admin</span>
-            </button>
+
+          {/* Center Visual Cards Mockup (Instagram-style showcase) */}
+          <div className="relative z-10 space-y-2.5 py-4">
+            <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-sm space-y-1 transform hover:-translate-y-0.5 transition-transform">
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="flex items-center gap-1.5 text-amber-300">
+                  <span>🛡️</span> Pixel Pirates
+                </span>
+                <span className="text-[9px] text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full font-black">
+                  ACTIVE CLAN
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300">24 Developers & UI designers building campus apps.</p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-sm space-y-1 transform hover:-translate-y-0.5 transition-transform">
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="flex items-center gap-1.5 text-amber-300">
+                  <span>🏆</span> North India Hackfest
+                </span>
+                <span className="text-[9px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full font-black">
+                  36-HR SPRINT
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300">248 student attendees · ₹50,000 prize pool</p>
+            </div>
+          </div>
+
+          {/* Bottom Kicker */}
+          <div className="relative z-10 pt-4 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400 font-semibold">
+            <span>Find your people. Build your thing.</span>
+            <span className="text-amber-400 font-bold">© 2026</span>
           </div>
         </div>
 
-        {/* 3. SIGN IN MODE */}
-        {authMode === "login" && (
-          <>
-            <span className="kicker">AUTHENTICATION & ACCESS</span>
-            <h2>Sign in to your campus</h2>
-            <p>Choose your workspace role to enter your dedicated portal.</p>
-            <form onSubmit={submitLogin}>
-              <div className="role-picker" aria-label="Choose account type">
-                <button
-                  className={role === "student" ? "active" : ""}
-                  type="button"
-                  onClick={() => {
-                    setRole("student")
-                    setLoginError("")
-                  }}
-                >
-                  <span>
-                    <Icon name="users" />
-                  </span>
-                  <div>
-                    <strong>Student (User)</strong>
-                    <small>Discover clans, teammates & events</small>
-                  </div>
-                </button>
-                <button
-                  className={role === "admin" ? "active" : ""}
-                  type="button"
-                  onClick={() => {
-                    setRole("admin")
-                    setLoginError("")
-                  }}
-                >
-                  <span>
-                    <Icon name="grid" />
-                  </span>
-                  <div>
-                    <strong>Campus Admin</strong>
-                    <small>Manage campus events & reports</small>
-                  </div>
-                </button>
-              </div>
+        {/* RIGHT COLUMN: INTERACTIVE FORM (Sign In / Register / Forgot Password) */}
+        <div className="w-full md:w-7/12 p-6 sm:p-8 lg:p-10 overflow-y-auto flex flex-col justify-between space-y-4 max-h-[92vh]">
+          {/* Mobile Logo (Visible only on small phone screens) */}
+          <div className="md:hidden flex items-center gap-2.5 pb-2 border-b border-slate-100">
+            <span className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center shadow">
+              CC
+            </span>
+            <strong className="text-base font-black tracking-tight text-slate-900">
+              CAMPUS CLANS
+            </strong>
+          </div>
 
-              <label>
-                Campus email or Username
-                <input
-                  value={loginEmail}
-                  onChange={(event) => {
-                    setLoginEmail(event.target.value)
-                    setLoginError("")
-                  }}
-                  placeholder={
-                    role === "admin" ? "admin@campus.edu or admin" : "student@campus.edu or username"
-                  }
-                  autoFocus
-                />
-              </label>
-              {loginError && <span className="field-error">{loginError}</span>}
-
-              <div className="flex items-center justify-between mt-1">
-                <label className="text-xs font-semibold text-slate-700 m-0">Password</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode("forgot")
-                    setForgotEmail(loginEmail)
-                  }}
-                  className="text-xs text-amber-600 font-bold hover:underline cursor-pointer"
-                >
-                  Forgot password?
-                </button>
-              </div>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="mt-1"
-              />
-
-              <button className="primary-button mt-4" type="submit" disabled={loginLoading}>
-                {loginLoading ? "Authenticating..." : `Sign in as ${role === "admin" ? "Campus Admin" : "Student (User)"}`}{" "}
-                <Icon name="arrow" size={17} />
+          {/* ⚡ QUICK DEMO PANEL ("aur abhi ki liye quick pannel to rakhna") */}
+          <div className="p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-left space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black tracking-wider text-amber-950 uppercase flex items-center gap-1.5">
+                <span>⚡</span> Quick Demo Testing (1-Click)
+              </span>
+              <span className="text-[9px] text-amber-800 font-extrabold bg-amber-200/80 px-2 py-0.5 rounded-full">
+                Instant Login
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onSubmit("student", "aarav.k@campus.edu")}
+                className="py-2 px-3 rounded-xl bg-white hover:bg-slate-900 hover:text-white border border-amber-300 font-bold text-xs text-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                title="Instant Login as Student (Aarav Khanna - User)"
+              >
+                <Icon name="users" size={13} />
+                <span>Student (User)</span>
               </button>
+              <button
+                type="button"
+                onClick={() => onSubmit("admin", "admin@campus.edu")}
+                className="py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-500 border border-amber-500 font-black text-xs text-slate-950 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                title="Instant Login as Campus Admin (Maya Kapoor - Admin)"
+              >
+                <Icon name="grid" size={13} />
+                <span>Campus Admin</span>
+              </button>
+            </div>
+          </div>
 
-              <div className="text-center pt-3 border-t border-slate-100 mt-4 text-xs font-medium text-slate-600">
-                Don't have an account?{" "}
+          {/* 1. SIGN IN VIEW (UNIFIED: AUTO-DETECTS ADMIN & STUDENT AUTOMATICALLY) */}
+          {authMode === "login" && (
+            <div className="space-y-4 my-auto">
+              <div className="text-left space-y-1">
+                <span className="text-[10px] font-black tracking-widest text-amber-600 uppercase">
+                  Authentication & Access
+                </span>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900 font-heading">
+                  Sign in to your account
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Enter your campus username or college email to continue.
+                </p>
+              </div>
+
+              <form onSubmit={submitLogin} className="space-y-3.5 text-left">
+                {loginError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
+                    {loginError}
+                  </div>
+                )}
+
+                {/* Username or College Email Input */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Username or College Email
+                  </label>
+                  <input
+                    value={loginEmail}
+                    onChange={(e) => {
+                      setLoginEmail(e.target.value)
+                      setLoginError("")
+                    }}
+                    placeholder="e.g. aaravk or admin"
+                    className="w-full text-xs"
+                    autoFocus
+                    required
+                  />
+                  <small className="text-[10px] text-slate-400 font-medium block">
+                    Tip: Entering your admin ID opens the Admin Console automatically.
+                  </small>
+                </div>
+
+                {/* Password Input with Forgot Password link right underneath */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 block">Password</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode("forgot")
+                        setForgotEmail(loginEmail)
+                      }}
+                      className="text-xs text-amber-600 font-bold hover:underline cursor-pointer"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full text-xs"
+                    required
+                  />
+                </div>
+
+                {/* Sign In Button */}
+                <button
+                  className="primary-button w-full !py-3 font-bold text-xs flex items-center justify-center gap-2 mt-2 shadow-sm"
+                  type="submit"
+                  disabled={loginLoading}
+                >
+                  <span>{loginLoading ? "Authenticating..." : "Sign In"}</span>
+                  <Icon name="arrow" size={15} />
+                </button>
+              </form>
+
+              {/* Instagram-style Bottom Switcher Box */}
+              <div className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 text-center text-xs text-slate-600 font-medium">
+                Don&apos;t have an account?{" "}
                 <button
                   type="button"
                   onClick={() => {
                     setAuthMode("register")
                     setRegEmail(loginEmail)
                   }}
-                  className="text-amber-600 font-extrabold hover:underline cursor-pointer"
+                  className="text-amber-600 font-black hover:underline cursor-pointer ml-1"
                 >
-                  Register with Email OTP →
+                  Sign up
                 </button>
               </div>
-            </form>
-          </>
-        )}
+            </div>
+          )}
 
-        {/* 4. STUDENT REGISTRATION MODE (EMAIL OTP + REAL-TIME USERNAME CHECK) */}
-        {authMode === "register" && (
-          <>
-            <span className="kicker">STUDENT REGISTRATION</span>
-            <h2>Create verified student account</h2>
-            <p>Verify your official campus email via 6-digit OTP to unlock clans and hackathons.</p>
+          {/* 2. SIGN UP / REGISTRATION VIEW (OTP VERIFICATION + LIVE USERNAME CHECK) */}
+          {authMode === "register" && (
+            <div className="space-y-4 my-auto">
+              <div className="text-left space-y-1">
+                <span className="text-[10px] font-black tracking-widest text-amber-600 uppercase">
+                  New Student Registration
+                </span>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900 font-heading">
+                  Create your account
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Verify your official college email via OTP to join clans and events.
+                </p>
+              </div>
 
-            <form onSubmit={submitRegister} className="space-y-3 mt-4 text-left">
-              {regError && <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">{regError}</div>}
-              {regStatusMsg && <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">{regStatusMsg}</div>}
-
-              {/* Step 1: Email + OTP Verification Box */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-black text-amber-950 uppercase tracking-wider block">
-                    1. College Email OTP Verification
-                  </label>
-                  {otpVerified && (
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center gap-1">
-                      ✓ Verified
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={regEmail}
-                    onChange={(e) => {
-                      setRegEmail(e.target.value)
-                      setOtpSent(false)
-                      setOtpVerified(false)
-                    }}
-                    placeholder="your.name@campus.edu"
-                    disabled={otpVerified}
-                    className="flex-1 text-xs"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={otpSending || otpVerified}
-                    className="px-3.5 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all disabled:opacity-50 cursor-pointer shrink-0"
-                  >
-                    {otpSending ? "Sending..." : otpSent ? "Resend OTP" : "Send OTP"}
-                  </button>
-                </div>
-
-                {otpSent && !otpVerified && (
-                  <div className="flex gap-2 pt-1 animate-fadeIn">
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={regOtp}
-                      onChange={(e) => setRegOtp(e.target.value)}
-                      placeholder="Enter 6-digit OTP (e.g. 123456)"
-                      className="flex-1 text-xs tracking-widest font-mono font-bold"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleVerifyOtp}
-                      disabled={otpVerifying}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
-                    >
-                      {otpVerifying ? "Verifying..." : "Verify OTP"}
-                    </button>
+              <form onSubmit={submitRegister} className="space-y-3 text-left">
+                {regError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
+                    {regError}
                   </div>
                 )}
-              </div>
+                {regStatusMsg && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                    {regStatusMsg}
+                  </div>
+                )}
 
-              {/* Step 2: Student Details & Live Username Check */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="text-xs font-bold text-slate-700">
-                  Full Name
-                  <input
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    placeholder="e.g. Aarav Khanna"
-                    required
-                  />
-                </label>
-
-                <label className="text-xs font-bold text-slate-700">
-                  Department
-                  <select
-                    value={regDept}
-                    onChange={(e) => setRegDept(e.target.value)}
-                    className="w-full mt-1 p-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white"
-                  >
-                    <option value="School of Engineering">School of Engineering</option>
-                    <option value="School of Computer Applications">School of Computer Applications</option>
-                    <option value="School of Management">School of Management</option>
-                    <option value="School of Design & Arts">School of Design & Arts</option>
-                    <option value="School of Applied Sciences">School of Applied Sciences</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="text-xs font-bold text-slate-700">
-                  Branch / Major
-                  <input
-                    value={regBranch}
-                    onChange={(e) => setRegBranch(e.target.value)}
-                    placeholder="B.Tech CSE"
-                    required
-                  />
-                </label>
-
-                <div>
+                {/* Step 1: College Email OTP Verification Box */}
+                <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">Desired Username</label>
-                    {usernameCheck.checking && (
-                      <span className="text-[10px] text-slate-500 font-semibold animate-pulse">Checking...</span>
+                    <label className="text-xs font-black text-amber-950 uppercase tracking-wider block">
+                      1. College Email OTP Verification
+                    </label>
+                    {otpVerified && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center gap-1">
+                        ✓ Verified
+                      </span>
                     )}
                   </div>
-                  <input
-                    value={regUsername}
-                    onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
-                    placeholder="aaravkhanna"
-                    required
-                    className={`mt-1 ${
-                      usernameCheck.available === true
-                        ? "border-emerald-500 bg-emerald-50/20"
-                        : usernameCheck.available === false
-                        ? "border-rose-500 bg-rose-50/20"
-                        : ""
-                    }`}
-                  />
-                  {usernameCheck.message && (
-                    <span
-                      className={`text-[11px] font-bold block pt-1 ${
-                        usernameCheck.available ? "text-emerald-700" : "text-rose-600"
-                      }`}
-                    >
-                      {usernameCheck.message}
-                    </span>
-                  )}
-                </div>
-              </div>
 
-              {/* Step 3: Password Credentials */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <label className="text-xs font-bold text-slate-700">
-                  Password (min 8 chars)
-                  <input
-                    type="password"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
-                </label>
-                <label className="text-xs font-bold text-slate-700">
-                  Confirm Password
-                  <input
-                    type="password"
-                    value={regConfirmPassword}
-                    onChange={(e) => setRegConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!otpVerified || regLoading || usernameCheck.available === false}
-                className="primary-button w-full mt-3 !py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {regLoading ? "Creating Account..." : "Complete Registration & Sign In"}{" "}
-                <Icon name="arrow" size={16} />
-              </button>
-
-              <div className="text-center pt-2 text-xs font-medium text-slate-600">
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setAuthMode("login")}
-                  className="text-amber-600 font-extrabold hover:underline cursor-pointer"
-                >
-                  Sign in here
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-
-        {/* 5. FORGOT / RESET PASSWORD WITH OTP MODE */}
-        {authMode === "forgot" && (
-          <>
-            <span className="kicker">ACCOUNT RECOVERY</span>
-            <h2>Reset your password with OTP</h2>
-            <p>Enter your registered college email to verify OTP and set a new password.</p>
-
-            <form onSubmit={submitForgot} className="space-y-3 mt-4 text-left">
-              {forgotError && <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">{forgotError}</div>}
-              {forgotStatusMsg && <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">{forgotStatusMsg}</div>}
-
-              {/* Step 1: Request Reset OTP */}
-              <label className="text-xs font-bold text-slate-700">
-                Registered College Email
-                <div className="flex gap-2 mt-1">
-                  <input
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="student@campus.edu"
-                    disabled={forgotOtpVerified}
-                    className="flex-1 text-xs"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={handleForgotSendOtp}
-                    disabled={forgotSending || forgotOtpVerified}
-                    className="px-3.5 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50"
-                  >
-                    {forgotSending ? "Sending..." : forgotOtpSent ? "Resend OTP" : "Send OTP"}
-                  </button>
-                </div>
-              </label>
-
-              {/* Step 2: Verify Reset OTP */}
-              {forgotOtpSent && !forgotOtpVerified && (
-                <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2">
-                  <label className="text-xs font-bold text-amber-950">
-                    Enter 6-Digit Reset OTP (Demo: 123456)
-                  </label>
                   <div className="flex gap-2">
                     <input
-                      type="text"
-                      maxLength={6}
-                      value={forgotOtp}
-                      onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder="123456"
-                      className="flex-1 text-xs font-mono tracking-widest font-bold"
+                      type="email"
+                      value={regEmail}
+                      onChange={(e) => {
+                        setRegEmail(e.target.value)
+                        setOtpSent(false)
+                        setOtpVerified(false)
+                      }}
+                      placeholder="your.name@campus.edu"
+                      disabled={otpVerified}
+                      className="flex-1 text-xs"
                       required
                     />
                     <button
                       type="button"
-                      onClick={handleForgotVerifyOtp}
-                      disabled={forgotVerifying}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
+                      onClick={handleSendOtp}
+                      disabled={otpSending || otpVerified}
+                      className="px-3.5 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all disabled:opacity-50 cursor-pointer shrink-0"
                     >
-                      {forgotVerifying ? "Verifying..." : "Verify OTP"}
+                      {otpSending ? "Sending..." : otpSent ? "Resend OTP" : "Send OTP"}
+                    </button>
+                  </div>
+
+                  {otpSent && !otpVerified && (
+                    <div className="flex gap-2 pt-1 animate-fadeIn">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={regOtp}
+                        onChange={(e) => setRegOtp(e.target.value)}
+                        placeholder="Enter 6-digit OTP (e.g. 123456)"
+                        className="flex-1 text-xs tracking-widest font-mono font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={otpVerifying}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
+                      >
+                        {otpVerifying ? "Verifying..." : "Verify OTP"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Step 2: Full Name & Department */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Full Name</label>
+                    <input
+                      value={regName}
+                      onChange={(e) => setRegName(e.target.value)}
+                      placeholder="e.g. Aarav Khanna"
+                      className="w-full text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Department</label>
+                    <select
+                      value={regDept}
+                      onChange={(e) => setRegDept(e.target.value)}
+                      className="w-full p-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white"
+                    >
+                      <option value="School of Engineering">School of Engineering</option>
+                      <option value="School of Computer Applications">School of Computer Applications</option>
+                      <option value="School of Management">School of Management</option>
+                      <option value="School of Design & Arts">School of Design & Arts</option>
+                      <option value="School of Applied Sciences">School of Applied Sciences</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Step 3: Branch & Real-time Username Check */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Branch / Major</label>
+                    <input
+                      value={regBranch}
+                      onChange={(e) => setRegBranch(e.target.value)}
+                      placeholder="B.Tech CSE"
+                      className="w-full text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 block">Desired Username</label>
+                      {usernameCheck.checking && (
+                        <span className="text-[10px] text-slate-500 font-semibold animate-pulse">Checking...</span>
+                      )}
+                    </div>
+                    <input
+                      value={regUsername}
+                      onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                      placeholder="aaravkhanna"
+                      className={`w-full text-xs ${
+                        usernameCheck.available === true
+                          ? "!border-emerald-500 bg-emerald-50/20"
+                          : usernameCheck.available === false
+                          ? "!border-rose-500 bg-rose-50/20"
+                          : ""
+                      }`}
+                      required
+                    />
+                    {usernameCheck.message && (
+                      <span
+                        className={`text-[10px] font-bold block ${
+                          usernameCheck.available ? "text-emerald-700" : "text-rose-600"
+                        }`}
+                      >
+                        {usernameCheck.message}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 4: Password Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Password (min 8 chars)</label>
+                    <input
+                      type="password"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Confirm Password</label>
+                    <input
+                      type="password"
+                      value={regConfirmPassword}
+                      onChange={(e) => setRegConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full text-xs"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Create Account Button */}
+                <button
+                  type="submit"
+                  disabled={!otpVerified || regLoading || usernameCheck.available === false}
+                  className="primary-button w-full !py-3 font-bold text-xs flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                  <span>{regLoading ? "Creating Account..." : "Create Account & Sign In"}</span>
+                  <Icon name="arrow" size={15} />
+                </button>
+              </form>
+
+              {/* Instagram-style Bottom Switcher Box */}
+              <div className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 text-center text-xs text-slate-600 font-medium">
+                Have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("login")}
+                  className="text-amber-600 font-black hover:underline cursor-pointer ml-1"
+                >
+                  Log in
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 3. FORGOT PASSWORD VIEW (OTP BASED PASSWORD RESET) */}
+          {authMode === "forgot" && (
+            <div className="space-y-4 my-auto">
+              <div className="text-left space-y-1">
+                <span className="text-[10px] font-black tracking-widest text-amber-600 uppercase">
+                  Account Recovery
+                </span>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900 font-heading">
+                  Reset your password
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Enter your registered college email to verify OTP and set a new password.
+                </p>
+              </div>
+
+              <form onSubmit={submitForgot} className="space-y-3.5 text-left">
+                {forgotError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
+                    {forgotError}
+                  </div>
+                )}
+                {forgotStatusMsg && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                    {forgotStatusMsg}
+                  </div>
+                )}
+
+                {/* Step 1: Registered Email Input */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Registered College Email</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="student@campus.edu"
+                      disabled={forgotOtpVerified}
+                      className="flex-1 text-xs"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleForgotSendOtp}
+                      disabled={forgotSending || forgotOtpVerified}
+                      className="px-3.5 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                    >
+                      {forgotSending ? "Sending..." : forgotOtpSent ? "Resend OTP" : "Send OTP"}
                     </button>
                   </div>
                 </div>
-              )}
 
-              {/* Step 3: Set New Password */}
-              {forgotOtpVerified && (
-                <>
-                  <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
-                    ✓ OTP Verified! Set your new password below.
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <label className="text-xs font-bold text-slate-700">
-                      New Password (min 8 chars)
+                {/* Step 2: OTP Verification Input */}
+                {forgotOtpSent && !forgotOtpVerified && (
+                  <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2">
+                    <label className="text-xs font-bold text-amber-950 block">
+                      Enter 6-Digit Reset OTP (Demo: 123456)
+                    </label>
+                    <div className="flex gap-2">
                       <input
-                        type="password"
-                        value={forgotPassword}
-                        onChange={(e) => setForgotPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="mt-1"
+                        type="text"
+                        maxLength={6}
+                        value={forgotOtp}
+                        onChange={(e) => setForgotOtp(e.target.value)}
+                        placeholder="123456"
+                        className="flex-1 text-xs font-mono tracking-widest font-bold"
                         required
                       />
-                    </label>
-
-                    <label className="text-xs font-bold text-slate-700">
-                      Confirm New Password
-                      <input
-                        type="password"
-                        value={forgotConfirmPassword}
-                        onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="mt-1"
-                        required
-                      />
-                    </label>
+                      <button
+                        type="button"
+                        onClick={handleForgotVerifyOtp}
+                        disabled={forgotVerifying}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all cursor-pointer shrink-0"
+                      >
+                        {forgotVerifying ? "Verifying..." : "Verify OTP"}
+                      </button>
+                    </div>
                   </div>
+                )}
 
-                  <button
-                    type="submit"
-                    disabled={forgotResetting}
-                    className="primary-button w-full mt-3 !py-3"
-                  >
-                    {forgotResetting ? "Updating Password..." : "Reset Password & Sign In"}{" "}
-                    <Icon name="check" size={16} />
-                  </button>
-                </>
-              )}
+                {/* Step 3: New Password Inputs */}
+                {forgotOtpVerified && (
+                  <div className="space-y-3 pt-1">
+                    <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                      ✓ OTP Verified! Set your new password below.
+                    </div>
 
-              <div className="text-center pt-2 text-xs font-medium text-slate-600">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">New Password (min 8 chars)</label>
+                        <input
+                          type="password"
+                          value={forgotPassword}
+                          onChange={(e) => setForgotPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full text-xs"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Confirm New Password</label>
+                        <input
+                          type="password"
+                          value={forgotConfirmPassword}
+                          onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full text-xs"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={forgotResetting}
+                      className="primary-button w-full !py-3 font-bold text-xs flex items-center justify-center gap-2 mt-2 shadow-sm"
+                    >
+                      <span>{forgotResetting ? "Updating..." : "Reset Password & Sign In"}</span>
+                      <Icon name="check" size={15} />
+                    </button>
+                  </div>
+                )}
+              </form>
+
+              {/* Instagram-style Bottom Switcher Box */}
+              <div className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 text-center text-xs text-slate-600 font-medium">
                 Remember your password?{" "}
                 <button
                   type="button"
                   onClick={() => setAuthMode("login")}
-                  className="text-amber-600 font-extrabold hover:underline cursor-pointer"
+                  className="text-amber-600 font-black hover:underline cursor-pointer ml-1"
                 >
-                  Back to Sign In
+                  Back to Log in
                 </button>
               </div>
-            </form>
-          </>
-        )}
+            </div>
+          )}
+        </div>
       </section>
     </div>
   )
